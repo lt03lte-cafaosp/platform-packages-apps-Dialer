@@ -544,6 +544,12 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
         if (mEnablePresence && !DialerUtils.isBound()) {
             DialerUtils.bindService((Context) DialtactsActivity.this);
         }
+
+        if (getResources().getBoolean(
+                R.bool.config_regional_video_call_welcome_dialog)) {
+            if (CallUtil.isVideoEnabled(this))
+                showVideoCallWelcomeDiag();
+        }
     }
 
     @Override
@@ -1501,6 +1507,16 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
             return FloatingActionButtonController.ALIGN_MIDDLE;
         }
         return FloatingActionButtonController.ALIGN_END;
+    }
+
+    private void showVideoCallWelcomeDiag() {
+        int videoCallWelcome = DialerUtils.getShowingState(
+                this, DialerUtils.STATE_UNKNOWN);
+        if (videoCallWelcome == DialerUtils.STATE_UNKNOWN
+                || videoCallWelcome == DialerUtils.STATE_SHOW) {
+            final Intent intent = new Intent(this, VideoCallWelcomeActivity.class);
+            startActivity(intent);
+        }
     }
 
     @Override

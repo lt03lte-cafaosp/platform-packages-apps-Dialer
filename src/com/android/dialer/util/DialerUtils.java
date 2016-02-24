@@ -24,6 +24,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.graphics.Point;
 import android.net.Uri;
 import android.os.Bundle;
@@ -299,5 +300,23 @@ public class DialerUtils {
             return true;
         }
         return false;
+    }
+
+    public static final int STATE_UNKNOWN = 0;
+    public static final int STATE_SHOW = 1;
+    public static final int STATE_HIDE = 2;
+    private static final String PREFS_MESSAGE = "video_call_welcome";
+    private static final String KEY_STATE = "message-repeat";
+
+    public static int getShowingState(Context context, int def) {
+        final SharedPreferences prefs = context.getSharedPreferences(
+                PREFS_MESSAGE, Context.MODE_PRIVATE);
+        return prefs.getInt(KEY_STATE, def);
+    }
+
+    public static void setShowingState(Context context, int value) {
+        final SharedPreferences prefs = context.getSharedPreferences(
+                PREFS_MESSAGE, Context.MODE_PRIVATE);
+        prefs.edit().putInt(KEY_STATE, value).apply();
     }
 }
