@@ -26,6 +26,7 @@
 
 
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.CALL_PRIVILEGED" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
@@ -71,7 +72,8 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE" />
     <!--End add for RCS -->
-
+   <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS" />
+   <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <application
         android:name="DialerApplication"
         android:label="@string/applicationLabel"
@@ -231,6 +233,12 @@
             android:label="@string/launcherActivityLabel"
             android:theme="@style/BackgroundOnlyTheme"
             android:exported="false"/>
+
+        <activity android:name=".VideoCallWelcomeActivity"
+                  android:theme="@*android:style/Theme.DeviceDefault.Light.Dialog.Alert"
+                  android:finishOnCloseSystemDialogs="true"
+                  android:excludeFromRecents="true"
+                  android:exported="false" />
 
         <!-- vCard related -->
         <activity android:name="com.android.contacts.common.vcard.ImportVCardActivity"
