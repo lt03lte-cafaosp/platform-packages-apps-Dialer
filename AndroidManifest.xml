@@ -86,6 +86,7 @@
         <meta-data android:name="com.google.android.backup.api_key"
             android:value="AEdPqrEAAAAIBXgtCEKQ6W0PXVnW-ZVia2KmlV2AxsTw3GjAeQ" />
 
+        <uses-library android:name="com.qualcomm.qti.smartsearch" android:required="false" />
         <!--add for RCS -->
         <uses-library android:name="com.suntek.mway.rcs.client.api" android:required="false" />
         <!-- The entrance point for Phone UI.

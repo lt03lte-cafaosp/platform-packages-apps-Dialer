@@ -33,6 +33,7 @@ import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Data;
 import android.provider.ContactsContract.Directory;
+import android.provider.ContactsContract.RawContacts;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -47,6 +48,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -67,6 +69,11 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
     private static final AtomicBoolean sInUpdate = new AtomicBoolean(false);
     private final Context mContext;
 
+    private Class mMultiMatchClass;
+    private Object mMultiMatchObject;
+    private Method mMultiMatchMethod;
+    private Method mMultiGetNameNumberMethod;
+
     /**
      * SmartDial DB version ranges:
      * <pre>
@@ -83,7 +90,7 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
     private static final String LAST_UPDATED_MILLIS = "last_updated_millis";
     private static final String DATABASE_VERSION_PROPERTY = "database_version";
 
-    private static final int MAX_ENTRIES = 20;
+    private static final int MAX_ENTRIES = 40;
 
     public interface Tables {
         /** Saves the necessary smart dial information of all contacts. */
@@ -112,6 +119,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
         static final String IN_VISIBLE_GROUP = "in_visible_group";
         static final String IS_PRIMARY = "is_primary";
         static final String LAST_SMARTDIAL_UPDATE_TIME = "last_smartdial_update_time";
+        static final String ACCOUNT_TYPE = "account_type";
+        static final String ACCOUNT_NAME = "account_name";
     }
 
     public static interface PrefixColumns extends BaseColumns {
@@ -147,6 +156,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
             Data.IS_SUPER_PRIMARY,              // 11
             Contacts.IN_VISIBLE_GROUP,          // 12
             Data.IS_PRIMARY,                    // 13
+            RawContacts.ACCOUNT_TYPE,           // 14
+            RawContacts.ACCOUNT_NAME,           // 15
         };
 
         static final int PHONE_ID = 0;
@@ -163,6 +174,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
         static final int PHONE_IS_SUPER_PRIMARY = 11;
         static final int PHONE_IN_VISIBLE_GROUP = 12;
         static final int PHONE_IS_PRIMARY = 13;
+        static final int PHONE_ACCOUNT_TYPE = 14;
+        static final int PHONE_ACCOUNT_NAME = 15;
 
         /** Selects only rows that have been updated after a certain time stamp.*/
         static final String SELECT_UPDATED_CLAUSE =
@@ -247,6 +260,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
         public final String phoneNumber;
         public final String lookupKey;
         public final long photoId;
+        public final String accountType;
+        public final String accountName;
 
         public ContactNumber(long id, long dataID, String displayName, String phoneNumber,
                 String lookupKey, long photoId) {
@@ -256,6 +271,20 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
             this.phoneNumber = phoneNumber;
             this.lookupKey = lookupKey;
             this.photoId = photoId;
+            this.accountType = null;
+            this.accountName = null;
+        }
+
+        public ContactNumber(long id, long dataID, String displayName, String phoneNumber,
+                String lookupKey, long photoId, String accountType, String accountName) {
+            this.dataId = dataID;
+            this.id = id;
+            this.displayName = displayName;
+            this.phoneNumber = phoneNumber;
+            this.lookupKey = lookupKey;
+            this.photoId = photoId;
+            this.accountType = accountType;
+            this.accountName = accountName;
         }
 
         @Override
@@ -275,7 +304,9 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                         && Objects.equal(this.displayName, that.displayName)
                         && Objects.equal(this.phoneNumber, that.phoneNumber)
                         && Objects.equal(this.lookupKey, that.lookupKey)
-                        && Objects.equal(this.photoId, that.photoId);
+                        && Objects.equal(this.photoId, that.photoId)
+                        && Objects.equal(this.accountType, that.accountType)
+                        && Objects.equal(this.accountName, that.accountName);
             }
             return false;
         }
@@ -346,6 +377,39 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
         mContext = Preconditions.checkNotNull(context, "Context must not be null");
     }
 
+    private void initMultiLanguageSearch() {
+        try {
+            if (mMultiMatchClass == null) {
+                mMultiMatchClass = Class
+                        .forName("com.qualcomm.qti.smartsearch.SmartMatch");
+                Log.d(TAG, "create multi match success");
+            }
+            if (mMultiMatchClass != null) {
+                if (mMultiMatchObject == null) {
+                    mMultiMatchObject = mMultiMatchClass.newInstance();
+                }
+                if (mMultiMatchMethod == null) {
+                    mMultiMatchMethod = mMultiMatchClass.getDeclaredMethod(
+                            "getMatchStringIndex", String.class, String.class,
+                            int.class);
+                }
+                if (mMultiGetNameNumberMethod == null) {
+                    mMultiGetNameNumberMethod = mMultiMatchClass.getDeclaredMethod(
+                            "getNameNumber", String.class, int.class);
+                }
+            }
+        } catch (Exception e) {
+        }
+    }
+
+    public Object getMultiMatchObject() {
+        return mMultiMatchObject;
+    }
+
+    public Method getMultiMatchMethod() {
+        return mMultiMatchMethod;
+    }
+
     /**
      * Creates tables in the database when database is created for the first time.
      *
@@ -372,7 +436,9 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                 SmartDialDbColumns.STARRED + " INTEGER, " +
                 SmartDialDbColumns.IS_SUPER_PRIMARY + " INTEGER, " +
                 SmartDialDbColumns.IN_VISIBLE_GROUP + " INTEGER, " +
-                SmartDialDbColumns.IS_PRIMARY + " INTEGER" +
+                SmartDialDbColumns.IS_PRIMARY + " INTEGER, " +
+                SmartDialDbColumns.ACCOUNT_TYPE + " TEXT, " +
+                SmartDialDbColumns.ACCOUNT_NAME + " TEXT " +
         ");");
 
         db.execSQL("CREATE TABLE " + Tables.PREFIX_TABLE + " (" +
@@ -638,8 +704,10 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                     SmartDialDbColumns.IS_SUPER_PRIMARY + ", " +
                     SmartDialDbColumns.IN_VISIBLE_GROUP+ ", " +
                     SmartDialDbColumns.IS_PRIMARY + ", " +
-                    SmartDialDbColumns.LAST_SMARTDIAL_UPDATE_TIME + ") " +
-                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    SmartDialDbColumns.LAST_SMARTDIAL_UPDATE_TIME + ", " +
+                    SmartDialDbColumns.ACCOUNT_TYPE + ", " +
+                    SmartDialDbColumns.ACCOUNT_NAME + ") " +
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             final SQLiteStatement insert = db.compileStatement(sqlInsert);
 
             final String numberSqlInsert = "INSERT INTO " + Tables.PREFIX_TABLE + " (" +
@@ -687,6 +755,10 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                 insert.bindLong(11, updatedContactCursor.getInt(PhoneQuery.PHONE_IN_VISIBLE_GROUP));
                 insert.bindLong(12, updatedContactCursor.getInt(PhoneQuery.PHONE_IS_PRIMARY));
                 insert.bindLong(13, currentMillis);
+                insert.bindString(14, updatedContactCursor
+                        .getString(PhoneQuery.PHONE_ACCOUNT_TYPE));
+                insert.bindString(15, updatedContactCursor
+                        .getString(PhoneQuery.PHONE_ACCOUNT_NAME));
                 insert.executeInsert();
                 final String contactPhoneNumber =
                         updatedContactCursor.getString(PhoneQuery.PHONE_NUMBER);
@@ -730,14 +802,34 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
 
             while (nameCursor.moveToNext()) {
                 /** Computes a list of prefixes of a given contact name. */
-                final ArrayList<String> namePrefixes =
-                        SmartDialPrefix.generateNamePrefixes(nameCursor.getString(columnIndexName));
+                try {
+                    if (mMultiGetNameNumberMethod != null) {
+                        String nameNumber = (String) mMultiGetNameNumberMethod.invoke(
+                                mMultiMatchObject,
+                                nameCursor.getString(columnIndexName), 0);
 
-                for (String namePrefix : namePrefixes) {
-                    insert.bindLong(1, nameCursor.getLong(columnIndexContactId));
-                    insert.bindString(2, namePrefix);
-                    insert.executeInsert();
-                    insert.clearBindings();
+                        nameNumber = nameNumber.replaceAll("[\\[\\.\\]]", "");
+
+                        insert.bindLong(1,
+                                nameCursor.getLong(columnIndexContactId));
+                        insert.bindString(2, nameNumber);
+                        insert.executeInsert();
+                        insert.clearBindings();
+                    } else {
+                        final ArrayList<String> namePrefixes = SmartDialPrefix
+                                .generateNamePrefixes(nameCursor
+                                        .getString(columnIndexName));
+
+                        for (String namePrefix : namePrefixes) {
+                            insert.bindLong(1,
+                                    nameCursor.getLong(columnIndexContactId));
+                            insert.bindString(2, namePrefix);
+                            insert.executeInsert();
+                            insert.clearBindings();
+                        }
+                    }
+                } catch (Exception e) {
+
                 }
             }
 
@@ -755,6 +847,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
      * update.
      */
     public void updateSmartDialDatabase() {
+        initMultiLanguageSearch();
+
         final SQLiteDatabase db = getWritableDatabase();
 
         synchronized(mLock) {
@@ -915,14 +1009,19 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
     public ArrayList<ContactNumber>  getLooseMatches(String query,
             SmartDialNameMatcher nameMatcher) {
         final boolean inUpdate = sInUpdate.get();
-        if (inUpdate) {
+        if (inUpdate || query.length() == 0) {
             return Lists.newArrayList();
         }
 
         final SQLiteDatabase db = getReadableDatabase();
 
         /** Uses SQL query wildcard '%' to represent prefix matching.*/
-        final String looseQuery = query + "%";
+        StringBuilder looseQuery = new StringBuilder(query);
+        for (int i = 0; i < looseQuery.toString().length();) {
+            looseQuery.insert(i, "%");
+            i = i + 2;
+        }
+        looseQuery.append("%");
 
         final ArrayList<ContactNumber> result = Lists.newArrayList();
 
@@ -937,10 +1036,12 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                 SmartDialDbColumns.PHOTO_ID + ", " +
                 SmartDialDbColumns.NUMBER + ", " +
                 SmartDialDbColumns.CONTACT_ID + ", " +
-                SmartDialDbColumns.LOOKUP_KEY +
-                " FROM " + Tables.SMARTDIAL_TABLE + " WHERE " +
-                SmartDialDbColumns.CONTACT_ID + " IN " +
-                    " (SELECT " + PrefixColumns.CONTACT_ID +
+                SmartDialDbColumns.LOOKUP_KEY + ", " +
+                SmartDialDbColumns.ACCOUNT_TYPE + ", " +
+                SmartDialDbColumns.ACCOUNT_NAME +
+                " FROM " + Tables.SMARTDIAL_TABLE +
+                " WHERE " + SmartDialDbColumns.CONTACT_ID + " IN " +
+                " (SELECT " + PrefixColumns.CONTACT_ID +
                     " FROM " + Tables.PREFIX_TABLE +
                     " WHERE " + Tables.PREFIX_TABLE + "." + PrefixColumns.PREFIX +
                     " LIKE '" + looseQuery + "')" +
@@ -961,6 +1062,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
             final int columnNumber = 3;
             final int columnId = 4;
             final int columnLookupKey = 5;
+            final int columnAccountType = 6;
+            final int columnAccountName = 7;
             if (DEBUG) {
                 stopWatch.lap("Found column IDs");
             }
@@ -978,6 +1081,8 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                 final long id = cursor.getLong(columnId);
                 final long photoId = cursor.getLong(columnPhotoId);
                 final String lookupKey = cursor.getString(columnLookupKey);
+                final String accountType = cursor.getString(columnAccountType);
+                final String accountName = cursor.getString(columnAccountName);
 
                 /** If a contact already exists and another phone number of the contact is being
                  * processed, skip the second instance.
@@ -998,7 +1103,7 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
                     /** If a contact has not been added, add it to the result and the hash set.*/
                     duplicates.add(contactMatch);
                     result.add(new ContactNumber(id, dataID, displayName, phoneNumber, lookupKey,
-                            photoId));
+                            photoId, accountType, accountName));
                     counter++;
                     if (DEBUG) {
                         stopWatch.lap("Added one result: Name: " + displayName);
