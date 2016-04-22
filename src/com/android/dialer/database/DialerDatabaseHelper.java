@@ -80,7 +80,7 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
      *   0-98   KitKat
      * </pre>
      */
-    public static final int DATABASE_VERSION = 4;
+    public static final int DATABASE_VERSION = 5;
     public static final String DATABASE_NAME = "dialer.db";
 
     /**
@@ -480,12 +480,23 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
             return;
         }
 
+        if (newNumber == 5) {
+            setupTables(db);
+            return;
+        }
+
         if (oldVersion != DATABASE_VERSION) {
             throw new IllegalStateException(
                     "error upgrading the database to version " + DATABASE_VERSION);
         }
 
         setProperty(db, DATABASE_VERSION_PROPERTY, String.valueOf(DATABASE_VERSION));
+    }
+
+    @Override
+    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        setupTables(db);
+        return;
     }
 
     /**
