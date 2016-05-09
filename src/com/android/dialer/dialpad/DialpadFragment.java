@@ -2026,6 +2026,17 @@ public class DialpadFragment extends Fragment
                 .show();
     }
 
+    private String getCallNumber() {
+        if (!isDigitsEmpty() || !(mRecipients == null || !mRecipients.isShown())) {
+            boolean isDigitsShown = mDigits.isShown();
+            if(isDigitsShown){
+                return isDigitsShown ? mDigits.getText().toString() :
+                        mRecipients.getText().toString().trim();
+            }
+        }
+        return null;
+    }
+
     private void DialAfterCheckNetwork() {
         if (ActivityCompat.checkSelfPermission(getContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION) !=
@@ -2033,7 +2044,7 @@ public class DialpadFragment extends Fragment
             requestPermissions(new String[] {Manifest.permission.ACCESS_COARSE_LOCATION}
                             ,PERMISSION_REQUEST_CODE_LOCATION);
         } else {
-            if(WifiCallUtils.showWifiCallDialogAndNotification(getActivity())) {
+            if(WifiCallUtils.showWifiCallDialogAndNotification(getActivity(), getCallNumber())) {
                  WifiCallUtils.pupConnectWifiCallDialog(getActivity());
              } else {
                  getView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -2047,7 +2058,7 @@ public class DialpadFragment extends Fragment
         switch (requestCode) {
             case PERMISSION_REQUEST_CODE_LOCATION:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if(WifiCallUtils.showWifiCallDialogAndNotification(getActivity())) {
+                    if(WifiCallUtils.showWifiCallDialogAndNotification(getActivity(), getCallNumber())) {
                         WifiCallUtils.pupConnectWifiCallDialog(getActivity());
                     } else {
                         getView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
