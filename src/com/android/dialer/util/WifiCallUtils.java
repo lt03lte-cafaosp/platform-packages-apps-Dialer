@@ -161,8 +161,8 @@ public class WifiCallUtils {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 Intent intent = new Intent(Intent.ACTION_MAIN);
-                intent.setClassName("com.android.settings",
-                        "com.android.settings.wificall.WifiCallingEnhancedSettings");
+                intent.setClassName("com.qualcomm.qti.extsettings",
+                        "com.qualcomm.qti.extsettings.wificall.WifiCallingEnhancedSettings");
                 context.startActivity(intent);
             }
         });
