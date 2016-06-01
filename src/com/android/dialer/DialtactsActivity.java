@@ -1506,6 +1506,10 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
             int[] grantResults) {
+        if (grantResults.length <= 0) {
+            Log.e(TAG, "Permission denied. So return from here");
+            return;
+        }
         switch (requestCode) {
             case PERMISSION_REQUEST_CODE_PHONE_STATE_ENABLED:
             case PERMISSION_REQUEST_CODE_PHONE_STATE_DISABLED:
