@@ -43,8 +43,9 @@ import android.net.NetworkInfo;
 import android.os.Handler;
 import android.os.SystemProperties;
 import android.telephony.CellInfo;
-import android.telephony.TelephonyManager;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.TelephonyManager;
+import android.util.Log;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.text.TextUtils;
@@ -53,7 +54,6 @@ import com.android.dialer.R;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import android.util.Log;
 
 public class WifiCallUtils {
 
@@ -156,8 +156,11 @@ public class WifiCallUtils {
     }
 
     public static void pupConnectWifiCallDialog(final Context context) {
+        String promptMessage = context.getString(com.android.dialer.R.string
+                .alert_call_no_cellular_coverage) +"\n"+ context.getString(com.android.dialer.R
+                .string.alert_user_connect_to_wifi_for_call);
         AlertDialog.Builder diaBuilder = new AlertDialog.Builder(context);
-        diaBuilder.setMessage(com.android.dialer.R.string.alert_call_no_cellular_coverage);
+        diaBuilder.setMessage(promptMessage);
         diaBuilder.setPositiveButton(com.android.internal.R.string.ok, new OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
