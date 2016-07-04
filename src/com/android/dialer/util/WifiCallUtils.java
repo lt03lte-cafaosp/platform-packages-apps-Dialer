@@ -44,15 +44,16 @@ import android.os.Handler;
 import android.os.SystemProperties;
 import android.telephony.CellInfo;
 import android.telephony.TelephonyManager;
-import android.util.Log;
+import android.telephony.PhoneNumberUtils;
 import android.view.WindowManager;
 import android.widget.TextView;
-
+import android.text.TextUtils;
 import com.android.dialer.R;
 
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import android.util.Log;
 
 public class WifiCallUtils {
 
@@ -177,16 +178,28 @@ public class WifiCallUtils {
     public static boolean showWifiCallDialogAndNotification(final Context context) {
         boolean wifiAvailableNotConnected = false;
         boolean wifiCallTurnOn = SystemProperties.getBoolean(
-                SYSTEM_PROPERTY_WIFI_CALL_TURNON, false);
+            SYSTEM_PROPERTY_WIFI_CALL_TURNON, false);
 
         ConnectivityManager conManager = (ConnectivityManager) context
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
+            .getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo wifiNetworkInfo = conManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
         if (wifiNetworkInfo.isAvailable() && !wifiNetworkInfo.isConnected()) {
             wifiAvailableNotConnected = true;
         }
 
         return wifiCallTurnOn && wifiAvailableNotConnected && !cellularNetworkAvailable(context);
+    }
+
+    public static boolean showWifiCallDialogAndNotification(final Context context, String number) {
+        boolean isEmergencyNumber = false;
+        boolean showWifiCallDialog = false;
+
+        showWifiCallDialog = showWifiCallDialogAndNotification(context);
+        if(!TextUtils.isEmpty(number)){
+            isEmergencyNumber = PhoneNumberUtils.isEmergencyNumber(number);
+            return showWifiCallDialog && !isEmergencyNumber;
+        }
+        return showWifiCallDialog;
     }
 
     public static void pupConnectWifiCallNotification(final Context context) {
