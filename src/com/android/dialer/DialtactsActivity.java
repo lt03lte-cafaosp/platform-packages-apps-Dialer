@@ -1288,6 +1288,9 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
                     (mListsFragment.getCurrentTabIndex() == ListsFragment.TAB_INDEX_ALL_CONTACTS);
             mConferenceDialButton.setVisibility((enabled && imsUseEnabled &&
                     !isCurrentTabAllContacts) ? View.VISIBLE : View.GONE);
+            if (getResources().getBoolean(R.bool.config_show_SIP_dial_icon)) {
+                mConferenceDialButton.setVisibility(View.GONE);
+            }
         }
     }
 
@@ -1537,6 +1540,9 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
                             ListsFragment.TAB_INDEX_ALL_CONTACTS);
                     mConferenceDialButton.setVisibility((enabled && imsUseEnabled &&
                             !isCurrentTabAllContacts) ? View.VISIBLE : View.GONE);
+                    if (getResources().getBoolean(R.bool.config_show_SIP_dial_icon)) {
+                        mConferenceDialButton.setVisibility(View.GONE);
+                    }
                 }
                 break;
             case PERMISSION_REQUEST_CODE_LOCATION:
