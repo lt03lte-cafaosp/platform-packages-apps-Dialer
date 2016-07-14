@@ -156,11 +156,8 @@ public class WifiCallUtils {
     }
 
     public static void pupConnectWifiCallDialog(final Context context) {
-        String promptMessage = context.getString(com.android.dialer.R.string
-                .alert_call_no_cellular_coverage) +"\n"+ context.getString(com.android.dialer.R
-                .string.alert_user_connect_to_wifi_for_call);
         AlertDialog.Builder diaBuilder = new AlertDialog.Builder(context);
-        diaBuilder.setMessage(promptMessage);
+        diaBuilder.setMessage(com.android.dialer.R.string.alert_call_no_cellular_coverage);
         diaBuilder.setPositiveButton(com.android.internal.R.string.ok, new OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
