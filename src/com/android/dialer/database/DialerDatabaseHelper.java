@@ -422,6 +422,12 @@ public class DialerDatabaseHelper extends SQLiteOpenHelper {
         setProperty(db, DATABASE_VERSION_PROPERTY, String.valueOf(DATABASE_VERSION));
     }
 
+    @Override
+    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        //write current version to DB
+        setProperty(db, DATABASE_VERSION_PROPERTY, String.valueOf(DATABASE_VERSION));
+    }
+
     /**
      * Stores a key-value pair in the {@link Tables#PROPERTIES} table.
      */
