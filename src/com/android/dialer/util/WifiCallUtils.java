@@ -228,13 +228,6 @@ public class WifiCallUtils {
             builder.setContentText(
                     context.getResources().getString(R.string.alert_user_connect_to_wifi_for_call));
             notiManager.notify(NOTIFICATION_WIFI_CALL_ID, builder.build());
-            new Handler().postDelayed(new Thread() {
-                    @Override
-                    public void run() {
-                        super.run();
-                        notiManager.cancel(NOTIFICATION_WIFI_CALL_ID);
-                    }
-           }, 2000);
         }
     }
 }
