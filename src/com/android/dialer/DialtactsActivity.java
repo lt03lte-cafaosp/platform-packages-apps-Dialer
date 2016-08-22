@@ -1525,6 +1525,10 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
             int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (null == grantResults) {
+            return;
+        }
         switch (requestCode) {
             case PERMISSION_REQUEST_CODE_PHONE_STATE_ENABLED:
             case PERMISSION_REQUEST_CODE_PHONE_STATE_DISABLED:
@@ -1550,8 +1554,6 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
                     WifiCallUtils.pupConnectWifiCallNotification((Context) DialtactsActivity.this);
                 }
                 break;
-            default:
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 }
