@@ -1534,7 +1534,8 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
             case PERMISSION_REQUEST_CODE_PHONE_STATE_DISABLED:
                 boolean imsUseEnabled = false;
                 boolean enabled = requestCode == PERMISSION_REQUEST_CODE_PHONE_STATE_ENABLED;
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     imsUseEnabled = ImsManager.isVolteEnabledByPlatform(this) &&
                             ImsManager.isEnhanced4gLteModeSettingEnabledByUser(this);
                 }
@@ -1550,7 +1551,8 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
                 }
                 break;
             case PERMISSION_REQUEST_CODE_LOCATION:
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     WifiCallUtils.pupConnectWifiCallNotification((Context) DialtactsActivity.this);
                 }
                 break;
