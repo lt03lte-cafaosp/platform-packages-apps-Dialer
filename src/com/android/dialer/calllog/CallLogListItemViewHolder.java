@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.SystemProperties;
 import android.provider.CallLog.Calls;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
@@ -169,6 +170,10 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
     private View.OnClickListener mExpandCollapseListener;
     private boolean mVoicemailPrimaryActionButtonClicked;
 
+    private boolean mEnablePresence = false;
+    private boolean mVideoCapable = true;
+    private boolean mHaveFetched = false;
+
     private CallLogListItemViewHolder(
             Context context,
             View.OnClickListener expandCollapseListener,
@@ -197,6 +202,8 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
         this.callLogEntryView = callLogEntryView;
         this.dayGroupHeader = dayGroupHeader;
         this.primaryActionButtonView = primaryActionButtonView;
+
+        mEnablePresence = SystemProperties.getBoolean("persist.presence.enable", false);
 
         Resources resources = mContext.getResources();
         mPhotoSize = mContext.getResources().getDimensionPixelSize(R.dimen.contact_photo_size);
@@ -332,16 +339,36 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
         } else {
             callButtonView.setVisibility(View.GONE);
         }
-        boolean showVideoCallBtn = true;
-        boolean enablePresence = SystemProperties.getBoolean(
-                        "persist.presence.enable", false);
-        if (enablePresence) {
-            showVideoCallBtn = DialerUtils.startAvailabilityFetch(number);
+
+        if (mEnablePresence) {
+            mVideoCapable = DialerUtils.getVTCapability(number);
+            if(!mHaveFetched){
+                new AsyncTask<Void, Void, Void>() {
+                    boolean newVTCapable;
+
+                    @Override
+                    protected Void doInBackground(Void... params) {
+                        if (null != number) {
+                            newVTCapable = DialerUtils.startAvailabilityFetch(number);
+                            mHaveFetched = true;
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    protected void onPostExecute(Void result) {
+                        super.onPostExecute(result);
+                        if (mVideoCapable != newVTCapable) {
+                            bindActionButtons();
+                        }
+                    }
+                }.execute();
+            }
         } else {
             // If one of the calls had video capabilities, show the video call button.
-            showVideoCallBtn = phoneCallDetailsViews.callTypeIcons.isVideoShown();
+            mVideoCapable = phoneCallDetailsViews.callTypeIcons.isVideoShown();
         }
-        if (mTelecomCallLogCache.isVideoEnabled() && canPlaceCallToNumber && showVideoCallBtn) {
+        if (mTelecomCallLogCache.isVideoEnabled() && canPlaceCallToNumber && mVideoCapable) {
             videoCallButtonView.setTag(IntentProvider.getReturnVideoCallIntentProvider(number));
             videoCallButtonView.setVisibility(View.VISIBLE);
             if (CallTypeIconsView.isCarrierOneEnabled()) {
@@ -408,6 +435,7 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
         expandVoicemailTranscriptionView(show);
 
         if (show) {
+            mHaveFetched = false;
             // Inflate the view stub if necessary, and wire up the event handlers.
             inflateActionViewStub();
 
