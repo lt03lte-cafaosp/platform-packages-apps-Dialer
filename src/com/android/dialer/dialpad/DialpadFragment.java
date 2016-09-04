@@ -2046,6 +2046,7 @@ public class DialpadFragment extends Fragment
         } else {
             if(WifiCallUtils.showWifiCallDialogAndNotification(getActivity(), getCallNumber())) {
                  WifiCallUtils.pupConnectWifiCallDialog(getActivity());
+                 WifiCallUtils.pupConnectWifiCallNotification(getActivity());
              } else {
                  getView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                  handleDialButtonPressed();
@@ -2060,6 +2061,7 @@ public class DialpadFragment extends Fragment
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     if(WifiCallUtils.showWifiCallDialogAndNotification(getActivity(), getCallNumber())) {
                         WifiCallUtils.pupConnectWifiCallDialog(getActivity());
+                        WifiCallUtils.pupConnectWifiCallNotification(getActivity());
                     } else {
                         getView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                         handleDialButtonPressed();
