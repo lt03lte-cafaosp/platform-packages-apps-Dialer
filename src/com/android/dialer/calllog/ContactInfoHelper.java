@@ -42,6 +42,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Utility class to look up the contact information for a given number.
@@ -250,6 +251,31 @@ public class ContactInfoHelper {
         Uri uri = Uri.withAppendedPath(PhoneLookup.ENTERPRISE_CONTENT_FILTER_URI,
                 Uri.encode(contactNumber));
         ContactInfo info = lookupContactFromUri(uri);
+        Pattern pattern = Pattern.compile("[,;]");
+        String[] nums = pattern.split(number);
+        if (nums != null && nums.length > 1) {
+            if (info == null || info == ContactInfo.EMPTY) {
+                info = new ContactInfo();
+                info.number = number;
+                info.formattedNumber = formatPhoneNumber(number, null, countryIso);
+                info.normalizedNumber = PhoneNumberUtils.formatNumberToE164(
+                        number, countryIso);
+                info.lookupUri = createTemporaryContactUri(info.formattedNumber);
+            }
+            String combName = "";
+            for (String num : nums) {
+                Uri singleUri = Uri.withAppendedPath(PhoneLookup.ENTERPRISE_CONTENT_FILTER_URI,
+                        Uri.encode(num));
+                ContactInfo singleCi = lookupContactFromUri(singleUri);
+                if (TextUtils.isEmpty(singleCi.name)) {
+                    singleCi.name = formatPhoneNumber(num, null, countryIso);
+                }
+                combName += singleCi.name + ";";
+            }
+            if (!TextUtils.isEmpty(combName) && combName.length() > 1) {
+                info.name = combName.substring(0, combName.length() - 1);
+            }
+        }
         if (info != null && info != ContactInfo.EMPTY) {
             info.formattedNumber = formatPhoneNumber(number, null, countryIso);
         } else if (mCachedNumberLookupService != null) {
