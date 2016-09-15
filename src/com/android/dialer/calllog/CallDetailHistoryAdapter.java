@@ -135,7 +135,7 @@ public class CallDetailHistoryAdapter extends BaseAdapter {
         boolean enablePresence = SystemProperties.getBoolean(
                         "persist.presence.enable", false);
         if (enablePresence) {
-            boolean showVideoCall = DialerUtils.startAvailabilityFetch(
+            boolean showVideoCall = DialerUtils.getVTCapability(
                     details.number.toString());
             isVideoCall = (details.features & Calls.FEATURES_VIDEO) == Calls.FEATURES_VIDEO
                     && CallUtil.isVideoEnabled(mContext) && showVideoCall;
