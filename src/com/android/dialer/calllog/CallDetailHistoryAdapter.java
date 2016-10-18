@@ -142,17 +142,18 @@ public class CallDetailHistoryAdapter extends BaseAdapter {
         } else {
             isVideoCall = (details.features & Calls.FEATURES_VIDEO) == Calls.FEATURES_VIDEO;
         }
-        boolean isVoLTE = (callType == INCOMING_IMS_TYPE) ||
-                          (callType == OUTGOING_IMS_TYPE) ||
-                          (callType == MISSED_IMS_TYPE);
         Log.d("CallDetailHistoryAdapter", "isVideoCall = " + isVideoCall
-                    + ", isVoLTE = " + isVoLTE);
+                    + ", callType = " + callType);
         callTypeIconView.clear();
         callTypeIconView.add(callType);
+        /**
+         * Ims icon(VoLTE/VoWiFi/ViLTE/ViWiFi) will be shown if carrierOne is supported
+         * otherwise, default video icon will be shown if it is a video call.
+         */
         if (CallTypeIconsView.isCarrierOneEnabled()) {
-             callTypeIconView.addImsOrVideoIcon(callType, isVideoCall);
+            callTypeIconView.addImsIcon(callType, isVideoCall);
         } else {
-             callTypeIconView.setShowVideo(isVideoCall);
+            callTypeIconView.setShowVideo(isVideoCall);
         }
         boolean imsCallLogEnabled = mContext.getResources()
                 .getBoolean(R.bool.ims_call_type_enabled);

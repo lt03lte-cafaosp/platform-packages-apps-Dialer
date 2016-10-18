@@ -49,7 +49,18 @@ public class CallTypeHelper {
     private final CharSequence mOutgoingVideoLTEName;
 
     private final CharSequence mMissedVideoLTEName;
-
+    /** Name used to identify incoming VoWifi calls. */
+    private final CharSequence mIncomingVoWifiName;
+    /** Name used to identify outgoing VoWifi calls. */
+    private final CharSequence mOutgoingVoWifiName;
+    /** Name used to identify missed VoWifi calls. */
+    private final CharSequence mMissedVoWifiName;
+    /** Name used to identify incoming video wifi calls. */
+    private final CharSequence mIncomingVideoWifiName;
+    /** Name used to identify outgoing video wifi calls. */
+    private final CharSequence mOutgoingVideoWifiName;
+    /** Name used to identify missed video wifi calls. */
+    private final CharSequence mMissedVideoWifiName;
     /** Name used to identify voicemail calls. */
     private final CharSequence mVoicemailName;
     /** Color used to identify new missed calls. */
@@ -77,6 +88,12 @@ public class CallTypeHelper {
         mIncomingVideoLTEName = resources.getString(R.string.type_incoming_volte_video);
         mOutgoingVideoLTEName = resources.getString(R.string.type_outgoing_volte_video);
         mMissedVideoLTEName = resources.getString(R.string.type_missed_volte_video);
+        mIncomingVoWifiName = resources.getString(R.string.type_incoming_vowifi);
+        mOutgoingVoWifiName = resources.getString(R.string.type_outgoing_vowifi);
+        mMissedVoWifiName = resources.getString(R.string.type_missed_vowifi);
+        mIncomingVideoWifiName = resources.getString(R.string.type_incoming_video_wifi);
+        mOutgoingVideoWifiName = resources.getString(R.string.type_outgoing_video_wifi);
+        mMissedVideoWifiName = resources.getString(R.string.type_missed_video_wifi);
         mVoicemailName = resources.getString(R.string.type_voicemail);
         mNewMissedColor = resources.getColor(R.color.call_log_missed_call_highlight_color);
         mNewVoicemailColor = resources.getColor(R.color.call_log_voicemail_highlight_color);
@@ -99,6 +116,13 @@ public class CallTypeHelper {
                     return mIncomingVoLTEName;
                 }
 
+            case Calls.INCOMING_WIFI_TYPE:
+                if (isVideoCall) {
+                    return mIncomingVideoWifiName;
+                } else {
+                    return mIncomingVoWifiName;
+                }
+
             case Calls.OUTGOING_TYPE:
                 if (isVideoCall) {
                     return mOutgoingVideoName;
@@ -111,6 +135,13 @@ public class CallTypeHelper {
                     return mOutgoingVideoLTEName;
                 } else {
                     return mOutgoingVoLTEName;
+                }
+
+            case Calls.OUTGOING_WIFI_TYPE:
+                if (isVideoCall) {
+                    return mOutgoingVideoWifiName;
+                } else {
+                    return mOutgoingVoWifiName;
                 }
 
             case Calls.MISSED_TYPE:
@@ -127,6 +158,13 @@ public class CallTypeHelper {
                     return mMissedVoLTEName;
                 }
 
+            case Calls.MISSED_WIFI_TYPE:
+                if (isVideoCall) {
+                    return mMissedVideoWifiName;
+                } else {
+                    return mMissedVoWifiName;
+                }
+
             case Calls.VOICEMAIL_TYPE:
                 return mVoicemailName;
 
@@ -140,16 +178,19 @@ public class CallTypeHelper {
         switch (callType) {
             case Calls.INCOMING_TYPE:
             case INCOMING_IMS_TYPE:
+            case Calls.INCOMING_WIFI_TYPE:
                 // New incoming calls are not highlighted.
                 return null;
 
             case Calls.OUTGOING_TYPE:
             case OUTGOING_IMS_TYPE:
+            case Calls.OUTGOING_WIFI_TYPE:
                 // New outgoing calls are not highlighted.
                 return null;
 
             case Calls.MISSED_TYPE:
             case MISSED_IMS_TYPE:
+            case Calls.MISSED_WIFI_TYPE:
                 return mNewMissedColor;
 
             case Calls.VOICEMAIL_TYPE:
@@ -167,6 +208,8 @@ public class CallTypeHelper {
         return (callType != Calls.INCOMING_TYPE && callType != Calls.OUTGOING_TYPE &&
                 callType != INCOMING_IMS_TYPE &&
                 callType != OUTGOING_IMS_TYPE &&
+                callType != Calls.INCOMING_WIFI_TYPE &&
+                callType != Calls.OUTGOING_WIFI_TYPE &&
                 callType != Calls.VOICEMAIL_TYPE);
     }
 }
