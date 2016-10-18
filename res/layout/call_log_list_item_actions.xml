@@ -53,8 +53,8 @@
         style="@style/CallLogActionStyle">
 
         <ImageView
-            android:id="@+id/videoCallIcon"
-            style="@style/CallLogActionIconStyle"/>
+            style="@style/CallLogActionIconStyle"
+            android:src="@drawable/ic_videocam_24dp" />
 
         <TextView
             style="@style/CallLogActionTextStyle"

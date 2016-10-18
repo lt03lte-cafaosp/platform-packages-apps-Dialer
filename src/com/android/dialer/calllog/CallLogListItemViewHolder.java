@@ -86,7 +86,6 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
     public View sendMessageView;
     public View detailsButtonView;
     public View callWithNoteButtonView;
-    public ImageView videoCallIconIV;
 
     /**
      * The row Id for the first call associated with the call log entry.  Used as a key for the
@@ -153,11 +152,19 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
     public boolean isBusiness;
 
     /**
+     * Whether this row is for a video call or not.
+     */
+    public boolean isVideoCall = false;
+
+    /**
      * The contact info for the contact displayed in this list item.
      */
     public ContactInfo info;
 
     private static final int VOICEMAIL_TRANSCRIPTION_MAX_LINES = 10;
+    private static final int INCOMING_IMS_TYPE = 5;
+    private static final int OUTGOING_IMS_TYPE = 6;
+    private static final int MISSED_IMS_TYPE = 7;
 
     private final Context mContext;
     private final TelecomCallLogCache mTelecomCallLogCache;
@@ -255,8 +262,6 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
             videoCallButtonView = actionsView.findViewById(R.id.video_call_action);
             videoCallButtonView.setOnClickListener(this);
 
-            videoCallIconIV = (ImageView) actionsView.findViewById(R.id.videoCallIcon);
-
             createNewContactButtonView = actionsView.findViewById(R.id.create_new_contact_action);
             createNewContactButtonView.setOnClickListener(this);
 
@@ -306,12 +311,57 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
                 primaryActionButtonView.setContentDescription(TextUtils.expandTemplate(
                         mContext.getString(R.string.description_call_action),
                         nameOrNumber));
-                primaryActionButtonView.setImageResource(R.drawable.ic_call_24dp);
+
+                if (CallTypeIconsView.isCarrierOneEnabled()) {
+                    final Drawable imsDrawable = getLteOrWifiDrawable(callType, isVideoCall);
+                    if (imsDrawable != null) {
+                        primaryActionButtonView.setImageDrawable(imsDrawable);
+                        primaryActionButtonView.setColorFilter(mContext.getResources().getColor(
+                                android.R.color.white),
+                                PorterDuff.Mode.MULTIPLY);
+                    } else {
+                        primaryActionButtonView.setImageResource(R.drawable.ic_call_24dp);
+                        primaryActionButtonView.setColorFilter(mContext.getResources().getColor(
+                                R.color.call_log_list_item_primary_action_icon_tint),
+                                PorterDuff.Mode.MULTIPLY);
+                    }
+                } else {
+                    primaryActionButtonView.setImageResource(R.drawable.ic_call_24dp);
+                }
                 primaryActionButtonView.setVisibility(View.VISIBLE);
             } else {
                 primaryActionButtonView.setTag(null);
                 primaryActionButtonView.setVisibility(View.GONE);
             }
+        }
+    }
+
+    /**
+     * Returns drawable for Carrier One if it is LTE or WiFi type call.
+     *  @param callType The type of call for the current call log entry.
+     *  @param isVideoCall Whether current call log entry is video call.
+     */
+    private Drawable getLteOrWifiDrawable(int callType, boolean isVideoCall) {
+        Resources resources = mContext.getResources();
+        switch(callType) {
+            case INCOMING_IMS_TYPE:
+            case OUTGOING_IMS_TYPE:
+            case MISSED_IMS_TYPE:
+                if (isVideoCall) {
+                    return resources.getDrawable(R.drawable.vilte);
+                } else {
+                    return resources.getDrawable(R.drawable.volte);
+                }
+            case Calls.INCOMING_WIFI_TYPE:
+            case Calls.OUTGOING_WIFI_TYPE:
+            case Calls.MISSED_WIFI_TYPE:
+                if (isVideoCall) {
+                    return resources.getDrawable(R.drawable.viwifi);
+                } else {
+                    return resources.getDrawable(R.drawable.vowifi);
+                }
+            default:
+                return null;
         }
     }
 
@@ -344,14 +394,6 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
         if (mTelecomCallLogCache.isVideoEnabled() && canPlaceCallToNumber && showVideoCallBtn) {
             videoCallButtonView.setTag(IntentProvider.getReturnVideoCallIntentProvider(number));
             videoCallButtonView.setVisibility(View.VISIBLE);
-            if (CallTypeIconsView.isCarrierOneEnabled()) {
-                Drawable drawable =  mContext.getResources().getDrawable(R.drawable.volte_video);
-                drawable.setColorFilter(mContext.getResources().getColor(
-                    R.color.dialtacts_secondary_text_color), PorterDuff.Mode.MULTIPLY);
-                videoCallIconIV.setImageDrawable(drawable);
-            } else {
-                videoCallIconIV.setImageResource(R.drawable.ic_videocam_24dp);
-            }
         } else {
             videoCallButtonView.setVisibility(View.GONE);
         }
