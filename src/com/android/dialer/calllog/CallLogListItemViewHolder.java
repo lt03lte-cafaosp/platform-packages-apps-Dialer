@@ -43,6 +43,7 @@ import com.android.contacts.common.dialog.CallSubjectDialog;
 import com.android.contacts.common.testing.NeededForTesting;
 import com.android.contacts.common.util.UriUtils;
 import com.android.dialer.R;
+import com.android.dialer.EnrichedCallHandler;
 import com.android.dialer.util.DialerUtils;
 import com.android.dialer.util.PhoneNumberUtil;
 import com.android.dialer.voicemail.VoicemailPlaybackPresenter;
@@ -175,6 +176,7 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
 
     private View.OnClickListener mExpandCollapseListener;
     private boolean mVoicemailPrimaryActionButtonClicked;
+    private EnrichedCallLogListItemHelper mEnrichedHelper;
 
     private CallLogListItemViewHolder(
             Context context,
@@ -261,6 +263,19 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
 
             videoCallButtonView = actionsView.findViewById(R.id.video_call_action);
             videoCallButtonView.setOnClickListener(this);
+
+            // rich call feature integration
+            if (EnrichedCallHandler.getInstance().isRcsFeatureEnabled()) {
+                mEnrichedHelper = new EnrichedCallLogListItemHelper(mContext);
+                mEnrichedHelper.inflateEnrichedItem((ViewGroup) actionsView);
+                mEnrichedHelper.setEnrichedGetNumberHelper(
+                        new EnrichedCallLogListItemHelper.EnrichedGetNumberHelper() {
+                    @Override
+                    public String getNumber() {
+                        return number;
+                    }
+                });
+            }
 
             createNewContactButtonView = actionsView.findViewById(R.id.create_new_contact_action);
             createNewContactButtonView.setOnClickListener(this);
@@ -452,7 +467,9 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
         if (show) {
             // Inflate the view stub if necessary, and wire up the event handlers.
             inflateActionViewStub();
-
+            if (mEnrichedHelper != null) {
+                mEnrichedHelper.showActions();
+            }
             actionsView.setVisibility(View.VISIBLE);
             actionsView.setAlpha(1.0f);
         } else {

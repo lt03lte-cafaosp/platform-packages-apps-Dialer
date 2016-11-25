@@ -24,6 +24,7 @@ import com.android.contacts.common.CallUtil;
 import com.android.contacts.common.list.DirectoryPartition;
 import com.android.contacts.common.util.PhoneNumberHelper;
 import com.android.dialer.calllog.ContactInfo;
+import com.android.dialer.EnrichedCallHandler;
 import com.android.dialer.service.CachedNumberLookupService;
 import com.android.dialer.service.CachedNumberLookupService.CachedContactInfo;
 
@@ -85,11 +86,17 @@ public class RegularSearchListAdapter extends DialerPhoneNumberListAdapter {
         // Email addresses that could be SIP addresses are an exception.
         mIsQuerySipAddress = PhoneNumberHelper.isUriNumber(queryString);
         boolean changed = false;
+        changed |= setShortcutEnabled(SHORTCUT_RICH_CALL_AND_VIDEO_CALL,
+                EnrichedCallHandler.getInstance().isRcsFeatureEnabled()
+                && showNumberShortcuts);
         changed |= setShortcutEnabled(SHORTCUT_DIRECT_CALL,
                 showNumberShortcuts || mIsQuerySipAddress);
         changed |= setShortcutEnabled(SHORTCUT_SEND_SMS_MESSAGE, showNumberShortcuts);
-        changed |= setShortcutEnabled(SHORTCUT_MAKE_VIDEO_CALL,
-                showNumberShortcuts && CallUtil.isVideoEnabled(getContext()));
+        changed |= setShortcutEnabled(
+                SHORTCUT_MAKE_VIDEO_CALL,
+                !EnrichedCallHandler.getInstance().isRcsFeatureEnabled()
+                && showNumberShortcuts
+                && CallUtil.isVideoEnabled(getContext()));
         if (changed) {
             notifyDataSetChanged();
         }

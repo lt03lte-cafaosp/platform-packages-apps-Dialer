@@ -73,6 +73,10 @@
     <!--End add for RCS -->
    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS" />
    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+    <!-- For enrich call -->
+    <uses-permission android:name="com.qualcomm.qti.internal.permission.ACCESS_ENRICHED_CALL" />
+
     <application
         android:name="DialerApplication"
         android:label="@string/applicationLabel"
@@ -90,6 +94,9 @@
         <!-- The entrance point for Phone UI.
              stateAlwaysHidden is set to suppress keyboard show up on
              dialpad screen. -->
+
+        <uses-library android:name="org.codeaurora.rcscommon" android:required="false" />
+
         <activity android:name=".DialtactsActivity"
             android:label="@string/launcherActivityLabel"
             android:theme="@style/DialtactsActivityTheme"

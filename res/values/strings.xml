@@ -913,4 +913,8 @@
     <string name="alert_user_connect_to_wifi_for_call">Connect to Wi-Fi to make calls.</string>
 
     <string name="video_call">Video Calling</string>
+
+    <!-- Rich call feature integration call log details -->
+    <string name="call_log_action_rich_call">Make Rich Call</string>
+
 </resources>

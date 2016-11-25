@@ -147,4 +147,15 @@
     <dimen name="promo_card_line_spacing">4dp</dimen>
 
     <dimen name="voicemail_playback_top_padding">12dp</dimen>
+
+    <!-- Enriched call integration dimensions -->
+    <dimen name="enriched_progressbar_margin_left">24dp</dimen>
+    <dimen name="enriched_progressbar_margin_top">14dp</dimen>
+    <dimen name="enriched_list_item_gap_between_image_and_text">14dp</dimen>
+    <dimen name="enriched_list_item_padding_right">2dp</dimen>
+    <dimen name="enriched_video_list_item_gap_between_image_and_text">1dp</dimen>
+    <dimen name="enriched_video_list_item_padding_left">0dp</dimen>
+    <dimen name="enriched_video_list_item_padding_right">5dp</dimen>
+    <dimen name="enriched_rich_call_search_group_width">0dp</dimen>
+    <dimen name="enriched_shortcut_video_call_width">0dp</dimen>
 </resources>

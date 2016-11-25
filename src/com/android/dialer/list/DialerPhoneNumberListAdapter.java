@@ -2,6 +2,7 @@ package com.android.dialer.list;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.telephony.PhoneNumberUtils;
 import android.text.BidiFormatter;
 import android.text.TextDirectionHeuristics;
@@ -11,6 +12,7 @@ import android.view.ViewGroup;
 import com.android.contacts.common.GeoUtil;
 import com.android.contacts.common.list.ContactListItemView;
 import com.android.contacts.common.list.PhoneNumberListAdapter;
+import com.android.dialer.EnrichedCallHandler;
 import com.android.dialer.R;
 
 /**
@@ -29,14 +31,17 @@ public class DialerPhoneNumberListAdapter extends PhoneNumberListAdapter {
 
     public final static int SHORTCUT_INVALID = -1;
     public final static int SHORTCUT_DIRECT_CALL = 0;
-    public final static int SHORTCUT_CREATE_NEW_CONTACT = 1;
-    public final static int SHORTCUT_ADD_TO_EXISTING_CONTACT = 2;
-    public final static int SHORTCUT_SEND_SMS_MESSAGE = 3;
-    public final static int SHORTCUT_MAKE_VIDEO_CALL = 4;
+    public final static int SHORTCUT_RICH_CALL_AND_VIDEO_CALL = 1;
+    public final static int SHORTCUT_CREATE_NEW_CONTACT = 2;
+    public final static int SHORTCUT_ADD_TO_EXISTING_CONTACT = 3;
+    public final static int SHORTCUT_SEND_SMS_MESSAGE = 4;
+    public final static int SHORTCUT_MAKE_VIDEO_CALL = 5;
 
-    public final static int SHORTCUT_COUNT = 5;
+    public final static int SHORTCUT_COUNT = 6;
 
     private final boolean[] mShortcutEnabled = new boolean[SHORTCUT_COUNT];
+
+    private EnrichedSearchAdapterHelper mEnrichedHelper;
 
     private final BidiFormatter mBidiFormatter = BidiFormatter.getInstance();
 
@@ -44,6 +49,23 @@ public class DialerPhoneNumberListAdapter extends PhoneNumberListAdapter {
         super(context);
 
         mCountryIso = GeoUtil.getCurrentCountryIso(context);
+        if (EnrichedCallHandler.getInstance().isRcsFeatureEnabled()) {
+            mEnrichedHelper = new EnrichedSearchAdapterHelper(context, this);
+        }
+    }
+
+    @Override
+    protected ContactListItemView newView(
+            Context context, int partition, Cursor cursor, int position, ViewGroup parent) {
+        ContactListItemView view = super.newView(context, partition, cursor, position, parent);
+        if (mEnrichedHelper != null) {
+            mEnrichedHelper.setDialButtonAttrubutes(view, position);
+        }
+        return view;
+    }
+
+    public EnrichedSearchAdapterHelper getEnrichedHelper(){
+        return mEnrichedHelper;
     }
 
     @Override
@@ -89,6 +111,10 @@ public class DialerPhoneNumberListAdapter extends PhoneNumberListAdapter {
     public View getView(int position, View convertView, ViewGroup parent) {
         final int shortcutType = getShortcutTypeFromPosition(position);
         if (shortcutType >= 0) {
+            if (mEnrichedHelper != null &&
+                    shortcutType == SHORTCUT_RICH_CALL_AND_VIDEO_CALL) {
+                return mEnrichedHelper.createRichCallEntry();
+            }
             if (convertView != null) {
                 assignShortcutToView((ContactListItemView) convertView, shortcutType);
                 return convertView;

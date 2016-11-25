@@ -69,6 +69,10 @@ public class RegularSearchFragment extends SearchFragment
         RegularSearchListAdapter adapter = new RegularSearchListAdapter(getActivity());
         adapter.setDisplayPhotos(true);
         adapter.setUseCallableUri(usesCallableUri());
+        if (adapter.getEnrichedHelper() != null) {
+            adapter.getEnrichedHelper()
+                .setNumberPickerListener(getOnPhoneNumberPickerListener());
+        }
         return adapter;
     }
 

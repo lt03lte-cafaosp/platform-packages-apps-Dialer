@@ -37,6 +37,7 @@ public class DialerApplication extends Application {
         Trace.endSection();
         Trace.beginSection(TAG + " Analytics initialization");
         AnalyticsUtil.initialize(this);
+        EnrichedCallHandler.init(this);
         Trace.endSection();
         Trace.endSection();
     }

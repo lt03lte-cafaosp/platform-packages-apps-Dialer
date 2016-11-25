@@ -30,6 +30,7 @@ import android.widget.TextView;
 import com.android.contacts.common.CallUtil;
 import com.android.dialer.PhoneCallDetails;
 import com.android.dialer.R;
+import com.android.dialer.EnrichedCallHandler;
 import com.android.dialer.util.DialerUtils;
 import com.google.common.collect.Lists;
 
@@ -154,6 +155,11 @@ public class CallDetailHistoryAdapter extends BaseAdapter {
             callTypeIconView.addImsIcon(callType, isVideoCall);
         } else {
             callTypeIconView.setShowVideo(isVideoCall);
+        }
+        if (EnrichedCallHandler.getInstance().isRcsFeatureEnabled()) {
+            boolean isRcsCall = (details.features & Calls.FEATURES_ENRICHED)
+                    == Calls.FEATURES_ENRICHED;
+            callTypeIconView.setShowRcs(isRcsCall);
         }
         boolean imsCallLogEnabled = mContext.getResources()
                 .getBoolean(R.bool.ims_call_type_enabled);
