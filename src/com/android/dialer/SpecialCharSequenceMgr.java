@@ -27,8 +27,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Looper;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
@@ -49,6 +51,7 @@ import com.android.dialer.calllog.PhoneAccountUtils;
 import com.android.dialer.util.TelecomUtil;
 import com.android.internal.telephony.ConfigResourceUtil;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,10 +74,14 @@ public class SpecialCharSequenceMgr {
     private static final String TAG_SELECT_ACCT_FRAGMENT = "tag_select_acct_fragment";
 
     private static final String SECRET_CODE_ACTION = "android.provider.Telephony.SECRET_CODE";
+    private static final String mEOGREAction = "tether.EoGRE.enable_disable";
     private static final String MMI_IMEI_DISPLAY = "*#06#";
     private static final String MMI_REGULATORY_INFO_DISPLAY = "*#07#";
     private static final int IMEI_14_DIGIT = 14;
     private static final String PRL_VERSION_DISPLAY = "*#0000#";
+    private static final String EOGRE_ENABLE_KEY = "*#36473#1#"; //Enable EOGRE
+    private static final String EOGRE_DISABLE_KEY = "*#36473#0#"; //Disable EOGRE
+    private static ConnectivityManager mConnectivityManager;
 
     /**
      * Remembers the previous {@link QueryHandler} and cancel the operation when needed, to
@@ -143,11 +150,88 @@ public class SpecialCharSequenceMgr {
                 || handleRegulatoryInfoDisplay(context, dialString)
                 || handlePinEntry(context, dialString)
                 || handleAdnEntry(context, dialString, textField)
-                || handleSecretCode(context, dialString)) {
+                || handleSecretCode(context, dialString)
+                || handleEnableEogreKey(context, dialString)
+                || handleDisableEogreKey(context, dialString)) {
             return true;
         }
 
         return false;
+    }
+
+    private static boolean handleEnableEogreKey(Context context, String input) {
+        if (input.equals(EOGRE_ENABLE_KEY)){
+            if (!isMobileDataEnabled(context)){
+                Log.d(TAG,"Mobile data is off. EoGRE cannot be enabled ");
+                final AlertDialog.Builder alertNoData = new AlertDialog.Builder(context);
+                alertNoData.setMessage(R.string.no_data_alert_message);
+                alertNoData.setPositiveButton("ok",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,int id) {
+                        dialog.cancel();
+                    }
+                });
+                alertNoData.show();
+                return true;
+            }
+            final AlertDialog.Builder alert = new AlertDialog.Builder(context);
+            alert.setTitle(R.string.tether_confirm_dialog);
+            alert.setMessage(R.string.tether_confirmation_message_enable);
+            alert.setPositiveButton("Yes",new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    Intent intent = new Intent();
+                    intent.putExtra("enable", true);
+                    intent.setAction(mEOGREAction);
+                    alert.getContext().sendBroadcast(intent);
+                }
+           });
+           alert.setNegativeButton("No",new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    // if this button is clicked, just close
+                    // the dialog box and do nothing
+                    dialog.cancel();
+                }
+            });
+            alert.show();
+            return true;
+       }
+       return false;
+    }
+
+    private static boolean handleDisableEogreKey(Context context, String input) {
+        if (input.equals(EOGRE_DISABLE_KEY)) {
+            final AlertDialog.Builder alert = new AlertDialog.Builder(context);
+            alert.setTitle(R.string.tether_confirm_dialog);
+            alert.setMessage(R.string.tether_confirmation_message_disable);
+            alert.setNegativeButton("cancel",null);
+            alert.setPositiveButton("Yes",new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    Intent intent = new Intent();
+                    intent.putExtra("enable", false);
+                    intent.setAction(mEOGREAction);
+                    alert.getContext().sendBroadcast(intent);
+                }
+            });
+           alert.setNegativeButton("No",new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog,int id) {
+                    // if this button is clicked, just close
+                    // the dialog box and do nothing
+                    dialog.cancel();
+                }
+            });
+            alert.show();
+            return true;
+       }
+       return false;
+    }
+
+    private static boolean isMobileDataEnabled(Context context) {
+        mConnectivityManager = (ConnectivityManager) context.getSystemService(
+                   Context.CONNECTIVITY_SERVICE);
+        if (mConnectivityManager != null) {
+            return mConnectivityManager.getMobileDataEnabled();
+        } else {
+            return false;
+        }
     }
 
     static private boolean handlePRLVersion(Context context, String input) {
