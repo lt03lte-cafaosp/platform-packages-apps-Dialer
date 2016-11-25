@@ -916,4 +916,8 @@
     <string name="alert_user_connect_to_wifi_for_call">Connect to Wi-Fi to make calls.</string>
 
     <string name="video_call">Video Calling</string>
+    <string name="tether_confirmation_message_disable">Please confirm to disable eogre</string>
+    <string name="tether_confirmation_message_enable">Please confirm to enable eogre</string>
+    <string name="tether_confirm_dialog">Confirmation needed</string>
+    <string name="no_data_alert_message">Mobile data is off. Please enable mobile data to enable eogre</string>
 </resources>
