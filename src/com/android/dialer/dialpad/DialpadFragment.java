@@ -872,12 +872,14 @@ public class DialpadFragment extends Fragment
         final MenuItem ipCallBySlot1MenuItem = menu.findItem(R.id.menu_ip_call_by_slot1);
         final MenuItem ipCallBySlot2MenuItem = menu.findItem(R.id.menu_ip_call_by_slot2);
         //show conference call menu when ims is registered
-        AddToConferenceCall4GMenuItem.setVisible(isIMSSupported());
+        AddToConferenceCall4GMenuItem.setVisible(is4GConferenceSupported() &&
+                MoreContactUtils.isImsRegistered());
 
         // We show "video call setting" menu only when the csvt is supported
         //which means the prop "persist.radio.csvt.enabled" = true
-        videocallsettingsMenuItem.setVisible(isVTSupported());
-        videocallMenuItem.setVisible(isVTSupported() || isIMSSupported());
+        videocallsettingsMenuItem.setVisible(MoreContactUtils.isCSVTSupported());
+        videocallMenuItem.setVisible(MoreContactUtils.isCSVTSupported() ||
+                MoreContactUtils.isImsRegistered());
 
         // We show "add to contacts" menu only when the user is
         // seeing usual dialpad and has typed at least one digit.
@@ -1760,11 +1762,11 @@ public class DialpadFragment extends Fragment
                 updateDialString(WAIT);
                 return true;
             case R.id.menu_video_call:
-                if(isVTSupported()){
+                if(MoreContactUtils.isCSVTSupported()) {
                     final CharSequence digits = mDigits.getText();
                     startActivity(getVTCallIntent(digits.toString()));
                     hideAndClearDialpad(false);
-                } else if (isIMSSupported()){
+                } else if (MoreContactUtils.isImsRegistered()){
                     placeIMSVTCall();
                 }
                 return true;
@@ -2047,11 +2049,11 @@ public class DialpadFragment extends Fragment
     public static boolean isVTActive() {
         return DialtactsActivity.isCsvtActive();
     }
-    private boolean isVTSupported() {
-        boolean CSVTSupported = SystemProperties.getBoolean("persist.radio.csvt.enabled", false);
-        return CSVTSupported && MoreContactUtils.isAnySimAviable();
-    }
 
+    private boolean is4GConferenceSupported() {
+        return this.getResources().getBoolean(R.bool.ims_enabled)
+            && SystemProperties.getBoolean("persist.radio.calls.on.ims", false);
+    }
     // add for csvt end
 
     public void placeIMSVTCall() {
@@ -2101,14 +2103,6 @@ public class DialpadFragment extends Fragment
                 hideAndClearDialpad(false);
             }
         }
-    }
-
-    public boolean isIMSSupported(){
-        boolean IMSSupported = this.getResources().getBoolean(R.bool.ims_enabled)
-                && SystemProperties.getBoolean("persist.radio.calls.on.ims", false);
-        boolean IMSRegisrered = SystemProperties.get(
-                "persist.radio.ims.registered", "0").equals("1");
-        return IMSSupported && IMSRegisrered && MoreContactUtils.isAnySimAviable();
     }
 
     @Override

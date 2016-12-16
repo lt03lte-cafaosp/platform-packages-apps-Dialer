@@ -673,10 +673,12 @@ public class CallDetailActivity extends Activity implements ProximitySensorAware
 
                     // The third action allows to invoke videocall to the number that placed the
                     // call.
-                    final boolean canVTCall = canPlaceCallsTo && (isVTSupported() || isIMSSupported()) && !isSipNumber;
+                    final boolean canVTCall = canPlaceCallsTo && (MoreContactUtils.
+                            isCSVTSupported() || MoreContactUtils.isImsRegistered()) &&
+                            !isSipNumber;
                     if (!MOVE_VTCALL_BTN_TO_OPTIONSMENU && canVTCall) {
                         Intent vtIntent;
-                        if (isVTSupported()){
+                        if (MoreContactUtils.isCSVTSupported()) {
                             vtIntent = getVTCallIntent(mNumber);
                         } else {
                             vtIntent = getIMSVTCallIntent(mNumber);
@@ -1078,15 +1080,10 @@ public class CallDetailActivity extends Activity implements ProximitySensorAware
         return super.onPrepareOptionsMenu(menu);
     }
     public void onMenuVTCall(MenuItem menuItem) {
-        if (isVTSupported()){
+        if (MoreContactUtils.isCSVTSupported()) {
             startActivity(getVTCallIntent(mNumber));
-        } else if (isIMSSupported()) {
-            // Make sure phone isn't already busy before starting direct call
-            TelephonyManager tm = (TelephonyManager)
-                    getSystemService(Context.TELEPHONY_SERVICE);
-            if (tm.getCallState() == TelephonyManager.CALL_STATE_IDLE) {
-                startActivity(getIMSVTCallIntent(mNumber));
-            }
+        } else if (MoreContactUtils.isImsRegistered()) {
+            startActivity(getIMSVTCallIntent(mNumber));
         }
     }
 
@@ -1330,11 +1327,6 @@ public class CallDetailActivity extends Activity implements ProximitySensorAware
                 intent.putExtra("call_number_key", number);
                 return intent;
         }
-
-    public boolean isVTSupported(){
-        boolean ICSVTSupported = SystemProperties.getBoolean("persist.radio.csvt.enabled", false);
-        return ICSVTSupported && MoreContactUtils.isAnySimAviable();
-    }
     //add for csvt
 
     private Intent getIMSVTCallIntent(String number) {
@@ -1346,14 +1338,6 @@ public class CallDetailActivity extends Activity implements ProximitySensorAware
         }
         intent.putExtra("ims_videocall", true);
         return intent;
-    }
-
-    public boolean isIMSSupported(){
-        boolean IMSSupported = this.getResources().getBoolean(R.bool.ims_enabled)
-                && SystemProperties.getBoolean("persist.radio.calls.on.ims", false);
-        boolean IMSRegisrered = SystemProperties.get(
-                "persist.radio.ims.registered", "0").equals("1");
-        return IMSSupported && IMSRegisrered && MoreContactUtils.isAnySimAviable();
     }
 
     /** Returns the given text, forced to be left-to-right. */

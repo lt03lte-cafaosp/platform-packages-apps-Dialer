@@ -23,6 +23,7 @@ import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.util.Log;
 
+import com.android.contacts.common.MoreContactUtils;
 import com.android.internal.telephony.ITelephony;
 
 /**
@@ -54,14 +55,9 @@ public class CallLogNotificationsHelper {
         context.startService(serviceIntent);
     }
 
-    public static boolean isVTSupported() {
-        return SystemProperties.getBoolean("persist.radio.csvt.enabled"
-            /* TelephonyProperties.PROPERTY_CSVT_ENABLED*/, false);
-    }
-
     /** Send broadcast to let VideoCall app cancel the missed vtcall notifications. */
     public static void removeMissedVTCallNotifications(Context context) {
-        if (isVTSupported()) {
+        if (MoreContactUtils.isCSVTSupported()) {
             Intent intent = new Intent("com.borqs.videocall.action.clearMissedVTCall");
             intent.putExtra("update_calllog", false);
             context.sendBroadcast(intent);

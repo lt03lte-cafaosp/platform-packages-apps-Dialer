@@ -362,10 +362,4 @@ public class CallLogQueryHandler extends NoNullCursorAsyncQueryHandler {
          */
         void onCallsFetched(Cursor combinedCursor);
     }
-
-    public boolean isVTSupported(){
-        return SystemProperties.getBoolean(
-                "persist.radio.csvt.enabled"
-       /* TelephonyProperties.PROPERTY_CSVT_ENABLED*/, false);
-    }
 }

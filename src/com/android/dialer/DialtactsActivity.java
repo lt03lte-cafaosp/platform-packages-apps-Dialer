@@ -243,13 +243,8 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
         return result;
     }
 
-    private boolean isVTSupported() {
-        return SystemProperties.getBoolean("persist.radio.csvt.enabled", false);
-        //return this.getResources().getBoolean(R.bool.csvt_enabled);
-    }
-
     private void createCsvtService() {
-        if (isVTSupported()) {
+        if (MoreContactUtils.isCSVTSupported()) {
             try {
                 Intent intent = new Intent("org.codeaurora.ims.csvt.ICsvtService");
                 boolean bound = bindService(intent,
@@ -272,12 +267,9 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
         }
     };
     //add for CSVT
-    private boolean isIMSSupported(){
-        boolean IMSSupported = this.getResources().getBoolean(R.bool.ims_enabled)
+    private boolean is4GConferenceSupported() {
+        return this.getResources().getBoolean(R.bool.ims_enabled)
             && SystemProperties.getBoolean("persist.radio.calls.on.ims", false);
-        boolean IMSRegisrered = SystemProperties
-                .getBoolean("persist.radio.ims.registered", false);
-        return IMSSupported && IMSRegisrered && MoreContactUtils.isAnySimAviable();
     }
 
     /**
@@ -326,7 +318,8 @@ public class DialtactsActivity extends TransactionSafeActivity implements View.O
             clearFrequents.setVisible(mPhoneFavoriteFragment.hasFrequents());
             final MenuItem start4GConferenceCallMenu
                     = menu.findItem(R.id.menu_4g_conference_call);
-            start4GConferenceCallMenu.setVisible(isIMSSupported());
+            start4GConferenceCallMenu.setVisible(is4GConferenceSupported() &&
+                    MoreContactUtils.isImsRegistered());
             super.show();
         }
     }

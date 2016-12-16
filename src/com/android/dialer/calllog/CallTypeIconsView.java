@@ -24,6 +24,7 @@ import android.provider.CallLog.Calls;
 import android.util.AttributeSet;
 import android.view.View;
 
+import com.android.contacts.common.MoreContactUtils;
 import com.android.contacts.common.test.NeededForTesting;
 import com.android.dialer.R;
 import com.google.common.collect.Lists;
@@ -94,19 +95,19 @@ public class CallTypeIconsView extends View {
                 return mResources.voicemail;
             //add for csvt call log type
             case CallTypeHelper.INCOMING_CSVT_TYPE:
-                if (isVTSupported()) {
+                if (MoreContactUtils.isCSVTSupported()) {
                     return mResources.csvt_incoming;
                 } else {
                     return mResources.incoming;
                 }
             case CallTypeHelper.OUTGOING_CSVT_TYPE:
-                if (isVTSupported()) {
+                if (MoreContactUtils.isCSVTSupported()) {
                     return mResources.csvt_outgoing;
                 } else {
                     return mResources.outgoing;
                 }
             case CallTypeHelper.MISSED_CSVT_TYPE:
-                if (isVTSupported()) {
+                if (MoreContactUtils.isCSVTSupported()) {
                     return mResources.csvt_missed;
                 } else {
                     return mResources.missed;
@@ -170,12 +171,5 @@ public class CallTypeIconsView extends View {
             voicemail = r.getDrawable(R.drawable.ic_call_voicemail_holo_dark);
             iconMargin = r.getDimensionPixelSize(R.dimen.call_log_icon_margin);
         }
-    }
-
-    //add  for csvt call log type
-    private boolean isVTSupported() {
-        return SystemProperties.getBoolean(
-                "persist.radio.csvt.enabled"
-        /* TelephonyProperties.PROPERTY_CSVT_ENABLED*/, false);
     }
 }
