@@ -148,18 +148,22 @@ public class CallDetailHistoryAdapter extends BaseAdapter {
         callTypeIconView.clear();
         callTypeIconView.add(callType);
         /**
+         * RCS icon will be shown if its a RCS call, otherwise go for IMS icon
+         */
+        boolean isRcsCall = false;
+        if ((details.features & Calls.FEATURES_ENRICHED) == Calls.FEATURES_ENRICHED) {
+            isRcsCall = true;
+            callTypeIconView.setShowRcs(isRcsCall);
+        } else {
+        /**
          * Ims icon(VoLTE/VoWiFi/ViLTE/ViWiFi) will be shown if carrierOne is supported
          * otherwise, default video icon will be shown if it is a video call.
          */
-        if (CallTypeIconsView.isCarrierOneEnabled()) {
-            callTypeIconView.addImsIcon(callType, isVideoCall);
-        } else {
-            callTypeIconView.setShowVideo(isVideoCall);
-        }
-        if (EnrichedCallHandler.getInstance().isRcsFeatureEnabled()) {
-            boolean isRcsCall = (details.features & Calls.FEATURES_ENRICHED)
-                    == Calls.FEATURES_ENRICHED;
-            callTypeIconView.setShowRcs(isRcsCall);
+            if (CallTypeIconsView.isCarrierOneEnabled()) {
+                callTypeIconView.addImsIcon(callType, isVideoCall);
+            } else {
+                callTypeIconView.setShowVideo(isVideoCall);
+            }
         }
         boolean imsCallLogEnabled = mContext.getResources()
                 .getBoolean(R.bool.ims_call_type_enabled);
@@ -177,7 +181,10 @@ public class CallDetailHistoryAdapter extends BaseAdapter {
                 default:
             }
         }
-        callTypeTextView.setText(mCallTypeHelper.getCallTypeText(callType, isVideoCall));
+        CharSequence callTypeText =
+                isRcsCall ? EnrichedCallHandler.getInstance().getCallTypeText(callType) :
+                mCallTypeHelper.getCallTypeText(callType, isVideoCall);
+        callTypeTextView.setText(callTypeText);
         // Set the date.
         CharSequence dateValue = DateUtils.formatDateRange(mContext, details.date, details.date,
                 DateUtils.FORMAT_SHOW_TIME | DateUtils.FORMAT_SHOW_DATE |

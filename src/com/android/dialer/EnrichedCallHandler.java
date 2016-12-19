@@ -30,6 +30,8 @@
 package com.android.dialer;
 
 import android.content.Context;
+import android.content.res.Resources;
+import android.provider.CallLog.Calls;
 import android.telephony.SubscriptionManager;
 
 import org.codeaurora.rcscommon.RcsManager;
@@ -52,12 +54,26 @@ public class EnrichedCallHandler {
     private boolean mIsRcsFeatureEnabled = false;
     private static EnrichedCallHandler sEnrichedCallHandler = null;
 
+    private static final int INCOMING_IMS_TYPE = 5;
+    private static final int OUTGOING_IMS_TYPE = 6;
+    private static final int MISSED_IMS_TYPE = 7;
+
+    /** Name used to identify RCS incoming calls. */
+    private final CharSequence mIncomingRcsName;
+    /** Name used to identify RCS outgoing calls. */
+    private final CharSequence mOutgoingRcsName;
+    /** Name used to identify missed calls. */
+    private final CharSequence mMissedName;
+    /** Name used to identify missed RCS incoming calls. */
+    private final CharSequence mMissedRcsName;
+
     // Messages for RCS capability checks
     public static final int MSG_ENABLE_RCS = 100;
     public static final int MSG_DISABLE_RCS = 101;
     public static final int MSG_CHECK_RCS = 102;
     public static final int MSG_ENABLE_RCS_CHECK_PROGRESS = 103;
     public static final int MSG_DISABLE_RCS_CHECK_PROGRESS = 104;
+    public static final int MSG_NETWORK_FAILURE = 105;
     public static final int RCS_CHECK_TIMEOUT = 32*1000;
 
     private EnrichedCallHandler(Context context) {
@@ -66,6 +82,11 @@ public class EnrichedCallHandler {
         if (mIsRcsFeatureEnabled) {
             mRcsManager.initialize();
         }
+        // Cache these values so that we do not need to look them up each time.
+        mIncomingRcsName = context.getString(R.string.type_incoming_rcs);
+        mOutgoingRcsName = context.getString(R.string.type_outgoing_rcs);
+        mMissedName = context.getString(R.string.type_missed);
+        mMissedRcsName = context.getString(R.string.type_missed_rcs);
     }
 
     /**
@@ -124,5 +145,25 @@ public class EnrichedCallHandler {
      */
     public void initializeRcsManager() {
         mRcsManager.initialize();
+    }
+
+    /**
+     * Returns the text used to represent the given call type.
+     * @param int callType
+     */
+    public CharSequence getCallTypeText(int callType) {
+        switch (callType) {
+            case Calls.INCOMING_TYPE:
+            case INCOMING_IMS_TYPE:
+                return mIncomingRcsName;
+            case Calls.OUTGOING_TYPE:
+            case OUTGOING_IMS_TYPE:
+                return mOutgoingRcsName;
+            case Calls.MISSED_TYPE:
+            case MISSED_IMS_TYPE:
+                return mMissedRcsName;
+            default:
+                return mMissedName;
+        }
     }
 }

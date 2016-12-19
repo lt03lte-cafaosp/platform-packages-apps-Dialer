@@ -32,14 +32,18 @@ package com.android.dialer.list;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.TypedArray;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.telephony.SubscriptionManager;
 import android.view.LayoutInflater;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.android.dialer.R;
 
@@ -107,6 +111,11 @@ public class EnrichedSearchAdapterHelper implements
             case EnrichedCallHandler.MSG_DISABLE_RCS_CHECK_PROGRESS:
                 changeRcsCheckProgress(false);
                 break;
+            case EnrichedCallHandler.MSG_NETWORK_FAILURE:
+                showFailureMessage();
+                break;
+            default:
+                // do nothing
             }
         }
     };
@@ -191,6 +200,8 @@ public class EnrichedSearchAdapterHelper implements
                                             intent.putExtra(RcsManager.ENRICH_CALL_INTENT_EXTRA,
                                                     data);
                                         } else {
+                                            mHandler.obtainMessage(EnrichedCallHandler
+                                                    .MSG_NETWORK_FAILURE).sendToTarget();
                                             intent = CallUtil.getCallIntent(
                                                     mEnrichedSearchActionHelper.getQueryString());
                                         }
@@ -293,6 +304,22 @@ public class EnrichedSearchAdapterHelper implements
                 mRcsCheckProgressBar.setVisibility(View.GONE);
                 mRichCallItem.removeCallbacks(mRcsDisableRunnable);
             }
+        }
+    }
+
+    /**
+    * Show a toast message about RCS service unavailability, when mobile data is not present
+    */
+    private void showFailureMessage() {
+        ConnectivityManager cm = (ConnectivityManager)mContext
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        if ((activeNetwork == null) ||
+                (activeNetwork.getType() != ConnectivityManager.TYPE_MOBILE)) {
+            Toast toast = Toast.makeText(mContext.getApplicationContext(),
+                    R.string.rcs_service_unavailable, Toast.LENGTH_SHORT);
+            toast.setGravity(Gravity.CENTER, 0, 0);
+            toast.show();
         }
     }
 

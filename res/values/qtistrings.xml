@@ -34,4 +34,9 @@
     <!-- OEM Key strings -->
     <string name="oem_key_code_action"></string>
     <string name="oem_code"></string>
+    <string name="type_incoming_rcs">Incoming Rich Call</string>
+    <string name="type_outgoing_rcs">Outgoing Rich Call</string>
+    <string name="type_missed_rcs">Missed Rich Call</string>
+    <string name="rcs_service_unavailable">Rich call service is currently
+            unavailable, dialing voice call</string>
 </resources>
