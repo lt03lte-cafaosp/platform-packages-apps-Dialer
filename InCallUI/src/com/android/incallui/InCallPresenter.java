@@ -44,6 +44,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import com.android.contacts.common.GeoUtil;
+import com.android.contacts.common.compat.CallSdkCompat;
 import com.android.contacts.common.compat.CompatUtils;
 import com.android.contacts.common.compat.telecom.TelecomManagerCompat;
 import com.android.contacts.common.interactions.TouchPointManager;
@@ -64,6 +65,7 @@ import com.android.incalluibind.ObjectFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -112,9 +114,11 @@ public class InCallPresenter implements CallList.Listener,
 
     private AudioModeProvider mAudioModeProvider;
     private StatusBarNotifier mStatusBarNotifier;
+    private ExternalCallNotifier mExternalCallNotifier;
     private ContactInfoCache mContactInfoCache;
     private Context mContext;
     private CallList mCallList;
+    private ExternalCallList mExternalCallList;
     private InCallActivity mInCallActivity;
     private InCallState mInCallState = InCallState.NO_CALLS;
     private ProximitySensor mProximitySensor;
@@ -304,8 +308,10 @@ public class InCallPresenter implements CallList.Listener,
 
     public void setUp(Context context,
             CallList callList,
+            ExternalCallList externalCallList,
             AudioModeProvider audioModeProvider,
             StatusBarNotifier statusBarNotifier,
+            ExternalCallNotifier externalCallNotifier,
             ContactInfoCache contactInfoCache,
             ProximitySensor proximitySensor) {
         if (mServiceConnected) {
@@ -323,6 +329,7 @@ public class InCallPresenter implements CallList.Listener,
         mContactInfoCache = contactInfoCache;
 
         mStatusBarNotifier = statusBarNotifier;
+        mExternalCallNotifier = externalCallNotifier;
         addListener(mStatusBarNotifier);
 
         mAudioModeProvider = audioModeProvider;
@@ -342,6 +349,8 @@ public class InCallPresenter implements CallList.Listener,
                 PowerManager.ACQUIRE_CAUSES_WAKEUP, "InCallPresenter");
 
         mCallList = callList;
+        mExternalCallList = externalCallList;
+        externalCallList.addExternalCallListener(mExternalCallNotifier);
 
         // This only gets called by the service so this is okay.
         mServiceConnected = true;
@@ -543,7 +552,12 @@ public class InCallPresenter implements CallList.Listener,
         if (shouldAttemptBlocking(call)) {
             maybeBlockCall(call);
         } else {
-            mCallList.onCallAdded(call);
+            if (call.getDetails()
+                    .hasProperty(CallSdkCompat.Details.PROPERTY_IS_EXTERNAL_CALL)) {
+                mExternalCallList.onCallAdded(call);
+            } else {
+                mCallList.onCallAdded(call);
+            }
         }
 
         // Since a call has been added we are no longer waiting for Telecom to send us a call.
@@ -561,6 +575,9 @@ public class InCallPresenter implements CallList.Listener,
         }
         if (FilteredNumbersUtil.hasRecentEmergencyCall(mContext)) {
             Log.i(this, "Not attempting to block incoming call due to recent emergency call");
+            return false;
+        }
+        if (call.getDetails().hasProperty(CallSdkCompat.Details.PROPERTY_IS_EXTERNAL_CALL)) {
             return false;
         }
 
@@ -632,8 +649,13 @@ public class InCallPresenter implements CallList.Listener,
     }
 
     public void onCallRemoved(android.telecom.Call call) {
-        mCallList.onCallRemoved(call);
-        call.unregisterCallback(mCallCallback);
+        if (call.getDetails()
+                .hasProperty(CallSdkCompat.Details.PROPERTY_IS_EXTERNAL_CALL)) {
+            mExternalCallList.onCallRemoved(call);
+        } else {
+            mCallList.onCallRemoved(call);
+            call.unregisterCallback(mCallCallback);
+        }
     }
 
     public void onCanAddCallChanged(boolean canAddCall) {
@@ -721,6 +743,13 @@ public class InCallPresenter implements CallList.Listener,
     @Override
     public void onDisconnect(Call call) {
         maybeShowErrorDialogOnDisconnect(call);
+
+        // Send broadcast to dismiss deflect dialog.
+        if (Objects.equals(call.getId(), QtiCallUtils.getDeflectOrTransferCallId())) {
+            Intent intent = new Intent(QtiCallUtils.INTENT_ACTION_DIALOG_DISMISS);
+            mInCallActivity.sendBroadcast(intent);
+            QtiCallUtils.setDeflectOrTransferCallId(null);
+        }
 
         // We need to do the run the same code as onCallListChange.
         onCallListChange(mCallList);
@@ -1381,6 +1410,15 @@ public class InCallPresenter implements CallList.Listener,
         }
     }
 
+    /**
+     * Called by the {@link VideoCallPresenter} to inform of a change in availability of
+     * incoming video stream.
+     */
+    public void notifyIncomingVideoAvailabilityChanged(boolean isAvailable) {
+        for (InCallEventListener listener : mInCallEventListeners) {
+            listener.onIncomingVideoAvailabilityChanged(isAvailable);
+        }
+    }
 
     /**
      * For some disconnected causes, we show a dialog.  This calls into the activity to show
@@ -1657,6 +1695,9 @@ public class InCallPresenter implements CallList.Listener,
 
             if (mStatusBarNotifier != null) {
                 removeListener(mStatusBarNotifier);
+            }
+            if (mExternalCallNotifier != null && mExternalCallList != null) {
+                mExternalCallList.removeExternalCallListener(mExternalCallNotifier);
             }
             mStatusBarNotifier = null;
 
@@ -2019,6 +2060,10 @@ public class InCallPresenter implements CallList.Listener,
         return mAnswerPresenter;
     }
 
+    ExternalCallNotifier getExternalCallNotifier() {
+        return mExternalCallNotifier;
+    }
+
     /**
      * Private constructor. Must use getInstance() to get this singleton.
      */
@@ -2091,6 +2136,7 @@ public class InCallPresenter implements CallList.Listener,
         public void onFullscreenModeChanged(boolean isFullscreenMode);
         public void onSecondaryCallerInfoVisibilityChanged(boolean isVisible, int height);
         public void updatePrimaryCallState();
+        public void onIncomingVideoAvailabilityChanged(boolean isAvailable);
     }
 
     public interface InCallUiListener {

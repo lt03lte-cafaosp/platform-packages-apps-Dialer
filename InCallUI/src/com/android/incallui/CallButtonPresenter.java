@@ -268,6 +268,10 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
     }
 
     public void mergeClicked() {
+        if (mCall == null) {
+            return;
+        }
+
         if (getUi().getContext().getResources().getBoolean(
                 R.bool.add_multi_participants_enabled)){
             int participantsCount = 0;
@@ -425,22 +429,8 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         getUi().setVideoPaused(pause);
     }
 
-    public void callTransferClicked(int type) {
-        String number = null;
+    public void callTransferClicked(int type, String number) {
         Context mContext = getUi().getContext();
-        if (type != QtiImsExtUtils.QTI_IMS_CONSULTATIVE_TRANSFER) {
-            /**
-             * Since there are no editor options available to provide a number during
-             * blind or assured transfer, for now, making use of the existing
-             * call deflection editor to provide the required number.
-             */
-            number = QtiImsExtUtils.getCallDeflectNumber(mContext.getContentResolver());
-            if (number == null) {
-                 QtiCallUtils.displayToast(mContext, R.string.qti_ims_transfer_num_error);
-                return;
-            }
-        }
-
         boolean status = mCall.sendCallTransferRequest(type, number);
         if (!status) {
             QtiCallUtils.displayToast(mContext, R.string.qti_ims_transfer_request_error);
@@ -474,7 +464,6 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
     private void updateButtonsState(Call call) {
         Log.v(this, "updateButtonsState");
         final CallButtonUi ui = getUi();
-
         final boolean isVideo = VideoUtils.isVideoCall(call);
 
         // Common functionality (audio, hold, etc).
@@ -500,11 +489,11 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         final boolean showUpgradeToVideo =
                 /* When useExt is true, show upgrade button for an active/held
                    call if the call has either voice or video capabilities */
+                ((isCallActive || isCallOnHold) &&
                 ((useExt && QtiCallUtils.hasVoiceOrVideoCapabilities(call)) ||
                 /* When useCustomVideoUi is true, show upgrade button for an active/held
                    voice call only if the current call has video capabilities */
-                (useCustomVideoUi && !isVideo && hasVideoCallCapabilities(call))
-                && (isCallActive || isCallOnHold)) ||
+                (useCustomVideoUi && !isVideo && hasVideoCallCapabilities(call)))) ||
                 /* When useExt and custom UI are false, default to Google behaviour */
                 (!isVideo && !useExt && !useCustomVideoUi && hasVideoCallCapabilities(call));
 
@@ -551,6 +540,9 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         ui.showButton(BUTTON_SWITCH_CAMERA, isVideo);
         ui.showButton(BUTTON_PAUSE_VIDEO, isVideo && !useExt && !useCustomVideoUi &&
                 !mEnhanceEnable);
+        if (isVideo) {
+            getUi().setVideoPaused(!VideoUtils.isTransmissionEnabled(call));
+        }
         ui.showButton(BUTTON_DIALPAD, true);
         ui.showButton(BUTTON_MERGE, showMerge);
         ui.showButton(BUTTON_ADD_PARTICIPANT, showAddParticipant && !mEnhanceEnable);
@@ -668,6 +660,12 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         CallButtonUi ui = getUi();
         if (ui != null) {
             ui.updateColors();
+        }
+    }
+
+    public void setCallTransferCallId() {
+        if (mCall != null) {
+            QtiCallUtils.setDeflectOrTransferCallId(mCall.getId());
         }
     }
 }

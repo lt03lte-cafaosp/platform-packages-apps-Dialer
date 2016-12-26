@@ -38,7 +38,10 @@ import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_RX_VIDEO_CA
 import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_VO_VIDEO_CALL;
 import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_ADD_PARTICIPANT;
 
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
@@ -79,7 +82,6 @@ public class CallButtonFragment
         implements CallButtonPresenter.CallButtonUi, OnMenuItemClickListener, OnDismissListener,
         View.OnClickListener {
 
-    private static final int INVALID_INDEX = -1;
     private int mButtonMaxVisible;
     // The button is currently visible in the UI
     private static final int BUTTON_VISIBLE = 1;
@@ -87,6 +89,10 @@ public class CallButtonFragment
     private static final int BUTTON_HIDDEN = 2;
     // The button has been collapsed into the overflow menu
     private static final int BUTTON_MENU = 3;
+
+    private static final int INVALID_CALL_TRANSFER_TYPE = 1000;
+
+    private int mCallTransferType = INVALID_CALL_TRANSFER_TYPE;
 
     public interface Buttons {
 
@@ -228,7 +234,7 @@ public class CallButtonFragment
         super.onActivityCreated(savedInstanceState);
 
         // set the buttons
-        updateAudioButtons(getPresenter().getSupportedAudio());
+        updateAudioButtons();
     }
 
     @Override
@@ -274,14 +280,17 @@ public class CallButtonFragment
             getPresenter().pauseVideoClicked(
                     !mPauseVideoButton.isSelected() /* pause */);
         } else if (id == R.id.blindTransfer) {
-            getPresenter().callTransferClicked(QtiImsExtUtils.QTI_IMS_BLIND_TRANSFER);
+            mCallTransferType = QtiImsExtUtils.QTI_IMS_BLIND_TRANSFER;
+            onCallTransferNumberSelect(getContext());
         } else if (id == R.id.assuredTransfer) {
-            getPresenter().callTransferClicked(QtiImsExtUtils.QTI_IMS_ASSURED_TRANSFER);
+            mCallTransferType = QtiImsExtUtils.QTI_IMS_ASSURED_TRANSFER;
+            onCallTransferNumberSelect(getContext());
         } else if (id == R.id.consultativeTransfer) {
-            getPresenter().callTransferClicked(QtiImsExtUtils.QTI_IMS_CONSULTATIVE_TRANSFER);
+            getPresenter().callTransferClicked(QtiImsExtUtils.QTI_IMS_CONSULTATIVE_TRANSFER, null);
         } else if (id == R.id.overflowButton) {
             if (mOverflowPopup != null) {
                 updateRecordMenu();
+                updateMergeCallsMenuItem();
                 mOverflowPopup.show();
             }
         } else if (id == R.id.manageVideoCallConferenceButton) {
@@ -310,11 +319,48 @@ public class CallButtonFragment
                 HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
     }
 
+    public void onCallTransferNumberSelect(Context context) {
+        getPresenter().setCallTransferCallId();
+        Intent dialogIntent = new Intent("com.qti.editnumber.INTENT_ACTION_LAUNCH_DIALOG");
+        dialogIntent.putExtra(QtiCallUtils.INTENT_EXTRA_DIALOG_TITLE,
+                getResources().getString(R.string.qti_call_transfer_title));
+        try {
+            startActivityForResult(dialogIntent, QtiCallUtils.ACTIVITY_REQUEST_ENTER_NUMBER);
+        } catch (ActivityNotFoundException e) {
+            Log.e(this, "Unable to launch EditNumberUI Dialog");
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        String number = null;
+        if (data == null) {
+            Log.w(this, "Data is null from intent" );
+            return;
+        }
+
+        if ((requestCode == QtiCallUtils.ACTIVITY_REQUEST_ENTER_NUMBER) &&
+                (resultCode == Activity.RESULT_OK)) {
+            Bundle b = data.getExtras();
+            number = b.getString("Number");
+        }
+        if (mCallTransferType != INVALID_CALL_TRANSFER_TYPE) {
+            getPresenter().callTransferClicked(mCallTransferType, number);
+        }
+    }
+
     private void updateRecordMenu() {
         MenuItem item = mOverflowPopup.getMenu().findItem(BUTTON_RECORD);
         if (item != null) {
             item.setTitle(((InCallActivity) getActivity()).isCallRecording() ?
                     R.string.menu_stop_record : R.string.menu_start_record);
+        }
+    }
+
+    private void updateMergeCallsMenuItem() {
+        MenuItem item = mOverflowPopup.getMenu().findItem(BUTTON_MERGE);
+        if (item != null) {
+            item.setEnabled(mMergeButton.isEnabled());
         }
     }
 
@@ -538,8 +584,14 @@ public class CallButtonFragment
     }
 
     @Override
-    public void setVideoPaused(boolean isPaused) {
-        mPauseVideoButton.setSelected(isPaused);
+    public void setVideoPaused(boolean isVideoPaused) {
+        mPauseVideoButton.setSelected(isVideoPaused);
+
+        if (isVideoPaused) {
+            mPauseVideoButton.setContentDescription(getText(R.string.onscreenTurnOnCameraText));
+        } else {
+            mPauseVideoButton.setContentDescription(getText(R.string.onscreenTurnOffCameraText));
+        }
     }
 
     @Override
@@ -618,7 +670,7 @@ public class CallButtonFragment
 
     @Override
     public void setAudio(int mode) {
-        updateAudioButtons(getPresenter().getSupportedAudio());
+        updateAudioButtons();
         refreshAudioModePopup();
 
         if (mPrevAudioMode != mode) {
@@ -629,7 +681,7 @@ public class CallButtonFragment
 
     @Override
     public void setSupportedAudio(int modeMask) {
-        updateAudioButtons(modeMask);
+        updateAudioButtons();
         refreshAudioModePopup();
     }
 
@@ -668,7 +720,7 @@ public class CallButtonFragment
     public void onDismiss(PopupMenu menu) {
         Log.d(this, "- onDismiss: " + menu);
         mAudioModePopupVisible = false;
-        updateAudioButtons(getPresenter().getSupportedAudio());
+        updateAudioButtons();
     }
 
     /**
@@ -713,7 +765,7 @@ public class CallButtonFragment
      * Updates the audio button so that the appriopriate visual layers
      * are visible based on the supported audio formats.
      */
-    private void updateAudioButtons(int supportedModes) {
+    private void updateAudioButtons() {
         final boolean bluetoothSupported = isSupported(CallAudioState.ROUTE_BLUETOOTH);
         final boolean speakerSupported = isSupported(CallAudioState.ROUTE_SPEAKER);
 

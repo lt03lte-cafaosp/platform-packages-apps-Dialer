@@ -654,11 +654,16 @@ public class DialpadFragment extends Fragment
     private void setFormattedDigits(String data, String normalizedNumber) {
         final String formatted = getFormattedDigits(data, normalizedNumber, mCurrentCountryIso);
         if (!TextUtils.isEmpty(formatted)) {
-            Editable digits = mDigits.getText();
-            digits.replace(0, digits.length(), formatted);
-            // for some reason this isn't getting called in the digits.replace call above..
-            // but in any case, this will make sure the background drawable looks right
-            afterTextChanged(digits);
+            if (isRecipientsShown()) {
+                mRecipients.setText(formatted);
+                afterTextChanged(mRecipients.getText());
+            } else {
+                Editable digits = mDigits.getText();
+                digits.replace(0, digits.length(), formatted);
+                // for some reason this isn't getting called in the digits.replace call above..
+                // but in any case, this will make sure the background drawable looks right
+                afterTextChanged(digits);
+            }
         }
     }
 
@@ -840,7 +845,7 @@ public class DialpadFragment extends Fragment
             IntentFilter filter = new IntentFilter(ACTION_WIFI_CALL_READY_STATUS_CHANGE);
             context.registerReceiver(mWifiCallReadyReceiver, filter);
             changeDialpadButton(WifiCallUtils.isWifiCallReadyEnabled(context));
-         }
+        }
         Trace.endSection();
     }
 
@@ -2066,17 +2071,18 @@ public class DialpadFragment extends Fragment
     private void dialAfterNetworkCheck() {
         if (ActivityCompat.checkSelfPermission(getContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION) !=
-            PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[] {Manifest.permission.ACCESS_COARSE_LOCATION},
+                PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
                     PERMISSION_REQUEST_CODE_LOCATION);
         } else {
-            if(WifiCallUtils.shallShowWifiCallDialog(getActivity())) {
-                 WifiCallUtils.showWifiCallDialog(getActivity());
-                 WifiCallUtils.showWifiCallNotification(getActivity());
-             } else {
-                 getView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
-                 handleDialButtonPressed();
-             }
+            if (!PhoneNumberUtils.isEmergencyNumber(mDigits.getText().toString()) &&
+                    WifiCallUtils.shallShowWifiCallDialog(getActivity())) {
+                WifiCallUtils.showWifiCallDialog(getActivity());
+                WifiCallUtils.showWifiCallNotification(getActivity());
+            } else {
+                getView().performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                handleDialButtonPressed();
+            }
         }
     }
 
