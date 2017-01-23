@@ -566,7 +566,10 @@ public class CallCardPresenter extends Presenter<CallCardPresenter.CallCardUi>
             ui.setPrimaryCallElapsedTime(false, 0);
             mCallTimer.cancel();
         } else {
-            ui.setPrimaryCallElapsedTime(true, mPrimary.getCallDuration());
+            final long connectTime = mPrimary.getConnectTimeMillis();
+            if (connectTime > 0) {
+                ui.setPrimaryCallElapsedTime(true, mPrimary.getCallDuration());
+            }
         }
     }
 
@@ -953,6 +956,10 @@ public class CallCardPresenter extends Presenter<CallCardPresenter.CallCardUi>
             return;
         }
 
+        final boolean notUpdateSecondary = mSecondary.getState() == Call.State.ACTIVE
+                && !mSecondary.can(android.telecom.Call.Details.CAPABILITY_SUPPORT_HOLD)
+                && !mSecondary.can(android.telecom.Call.Details.CAPABILITY_HOLD);
+        Log.d(TAG, "notUpdateSecondary:" + notUpdateSecondary);
         if (mSecondary.isConferenceCall()) {
             ui.setSecondary(
                     true /* show */,
@@ -963,7 +970,7 @@ public class CallCardPresenter extends Presenter<CallCardPresenter.CallCardUi>
                     true /* isConference */,
                     mSecondary.isVideoCall(mContext),
                     mIsFullscreen);
-        } else if (mSecondaryContactInfo != null) {
+        } else if (mSecondaryContactInfo != null && !notUpdateSecondary) {
             Log.d(TAG, "updateSecondaryDisplayInfo() " + mSecondaryContactInfo);
             String name = getNameForCall(mSecondaryContactInfo);
             boolean nameIsNumber = name != null && name.equals(mSecondaryContactInfo.number);
