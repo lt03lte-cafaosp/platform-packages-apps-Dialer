@@ -39,6 +39,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemProperties;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts.Data;
@@ -99,12 +100,18 @@ public class SpeedDialListActivity extends ListActivity implements OnItemClickLi
         RawContacts.ACCOUNT_TYPE,
     };
 
+    public static final String PROPERTY_RADIO_ATEL_CARRIER = "persist.radio.atel.carrier";
+    public static final String CARRIER_ONE_DEFAULT_MCC_MNC = "405854";
+
     private static final int DISPLAY_NAME = 1;
     private static final int ACCOUNT_TYPE = 2;
 
     private AlertDialog mAddSpeedDialDialog;
     private EditText mEditNumber;
     private Button mCompleteButton;
+
+    private boolean mEmergencyCallSpeedDial = false;
+    private int mSpeedDialKeyforEmergncyCall = -1;
 
     /** Called when the activity is first created. */
     @Override
@@ -126,6 +133,10 @@ public class SpeedDialListActivity extends ListActivity implements OnItemClickLi
         ListView listview = getListView();
         listview.setOnItemClickListener(this);
         listview.setOnCreateContextMenuListener(this);
+        String property = SystemProperties.get(PROPERTY_RADIO_ATEL_CARRIER);
+        mEmergencyCallSpeedDial = CARRIER_ONE_DEFAULT_MCC_MNC.equals(property);
+        mSpeedDialKeyforEmergncyCall = getResources().getInteger(
+                R.integer.speed_dial_emergency_number_assigned_key);
     }
 
     @Override
@@ -206,7 +217,12 @@ public class SpeedDialListActivity extends ListActivity implements OnItemClickLi
                 Log.w(TAG, "can not find activity deal with voice mail");
             }
         } else if (position < SPEED_ITEMS) {
-            if ("".equals(mContactDataNumber[position-1])) {
+            int key = position + 1;
+            if (mEmergencyCallSpeedDial && (key == mSpeedDialKeyforEmergncyCall)) {
+                Toast.makeText(SpeedDialListActivity.this, R.string.speed_dial_can_not_be_set,
+                Toast.LENGTH_SHORT).show();
+                return;
+            } else if ("".equals(mContactDataNumber[position-1])) {
                 showAddSpeedDialDialog(position);
             } else {
                 final String numStr = mContactDataNumber[position - 1];

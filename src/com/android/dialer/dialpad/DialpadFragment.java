@@ -1170,6 +1170,14 @@ public class DialpadFragment extends Fragment
             case R.id.nine:
                 if ((mDigits.length() == 1)) {
                     removePreviousDigitIfPossible();
+                    String property = SystemProperties.get("persist.radio.atel.carrier");
+                    boolean isCarrierOneSupported = "405854".equals(property);
+                    if (isCarrierOneSupported &&
+                           (getNumberfromId(id) == mContext.getResources().getInteger(
+                            R.integer.speed_dial_emergency_number_assigned_key))) {
+                        placeEmergencyCall();
+                        return true;
+                    }
                     final boolean isAirplaneModeOn =
                             Settings.System.getInt(getActivity().getContentResolver(),
                                     Settings.System.AIRPLANE_MODE_ON, 0) != 0;
@@ -2193,4 +2201,32 @@ public class DialpadFragment extends Fragment
             setFormattedDigits(phoneNumber, null);
         }
     }
+
+    private int getNumberfromId(int id) {
+        int number = -1;
+        switch(id) {
+            case R.id.zero: number = 0; break;
+            case R.id.one: number = 1; break;
+            case R.id.two: number = 2; break;
+            case R.id.three: number = 3; break;
+            case R.id.four: number = 4; break;
+            case R.id.five: number = 5; break;
+            case R.id.six: number = 6; break;
+            case R.id.seven: number = 7; break;
+            case R.id.eight: number = 8; break;
+            case R.id.nine: number = 9; break;
+        }
+        return number;
+    }
+
+    private void placeEmergencyCall() {
+            Resources resources = mContext.getResources();
+            String emergencyNumber = resources.getString(
+                        R.string.emergency_number);
+            Intent intent = new Intent(Intent.ACTION_CALL_EMERGENCY);
+            intent.setData(Uri.fromParts("tel", emergencyNumber, null));
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+    }
+
 }
