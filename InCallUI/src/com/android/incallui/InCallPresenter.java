@@ -31,6 +31,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.provider.CallLog;
+import android.provider.Settings;
 import android.telecom.DisconnectCause;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
@@ -1895,10 +1896,14 @@ public class InCallPresenter implements CallList.Listener,
     }
 
     private void wakeUpScreen() {
-        if (!isScreenInteractive()) {
+        if (!isScreenInteractive() && !isTheaterModeOn()) {
             acquireWakeLock();
             releaseWakeLock();
         }
+    }
+
+    private boolean isTheaterModeOn() {
+        return Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.THEATER_MODE_ON, 0) == 1;
     }
 
     private void acquireWakeLock() {
