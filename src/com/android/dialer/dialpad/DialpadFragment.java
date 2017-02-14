@@ -1170,9 +1170,9 @@ public class DialpadFragment extends Fragment
             case R.id.nine:
                 if ((mDigits.length() == 1)) {
                     removePreviousDigitIfPossible();
-                    String property = SystemProperties.get("persist.radio.atel.carrier");
-                    boolean isCarrierOneSupported = "405854".equals(property);
-                    if (isCarrierOneSupported &&
+                    boolean panicButtonEnabled = mContext.getResources().getBoolean(
+                            R.bool.panic_button_enabled);
+                    if (panicButtonEnabled &&
                            (getNumberfromId(id) == mContext.getResources().getInteger(
                             R.integer.speed_dial_emergency_number_assigned_key))) {
                         placeEmergencyCall();

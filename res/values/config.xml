@@ -35,6 +35,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
     <bool name="ims_enabled">true</bool>
 
+    <bool name="panic_button_enabled">false</bool>
     <integer name="speed_dial_emergency_number_assigned_key">9</integer>
     <string name="emergency_number">112</string>
 </resources>
