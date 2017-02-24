@@ -39,7 +39,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.SystemProperties;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts.Data;
@@ -100,9 +99,6 @@ public class SpeedDialListActivity extends ListActivity implements OnItemClickLi
         RawContacts.ACCOUNT_TYPE,
     };
 
-    public static final String PROPERTY_RADIO_ATEL_CARRIER = "persist.radio.atel.carrier";
-    public static final String CARRIER_ONE_DEFAULT_MCC_MNC = "405854";
-
     private static final int DISPLAY_NAME = 1;
     private static final int ACCOUNT_TYPE = 2;
 
@@ -133,8 +129,8 @@ public class SpeedDialListActivity extends ListActivity implements OnItemClickLi
         ListView listview = getListView();
         listview.setOnItemClickListener(this);
         listview.setOnCreateContextMenuListener(this);
-        String property = SystemProperties.get(PROPERTY_RADIO_ATEL_CARRIER);
-        mEmergencyCallSpeedDial = CARRIER_ONE_DEFAULT_MCC_MNC.equals(property);
+        mEmergencyCallSpeedDial = getResources().getBoolean(
+                R.bool.panic_button_enabled);
         mSpeedDialKeyforEmergncyCall = getResources().getInteger(
                 R.integer.speed_dial_emergency_number_assigned_key);
     }
