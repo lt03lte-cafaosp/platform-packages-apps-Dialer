@@ -46,7 +46,6 @@ import android.telecom.InCallService.VideoCall;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.util.Size;
-import android.view.View;
 
 import java.lang.reflect.*;
 import java.util.ArrayList;
@@ -74,7 +73,6 @@ public class QtiCallUtils {
     public static final String INTENT_ACTION_DIALOG_DISMISS =
             "com.qti.editnumber.INTENT_ACTION_DIALOG_DISMISS";
     private static String mEditNumberCallId;
-    private static Toast mToast = null;
 
     static {
         VIDEO_QUALITY_TABLE.put(new Size(320,240), VideoProfile.QUALITY_LOW);
@@ -155,12 +153,7 @@ public class QtiCallUtils {
      * Displays the message as a Toast on the UI
      */
     public static void displayToast(Context context, String msg) {
-        if (mToast == null || mToast.getView().getWindowVisibility() != View.VISIBLE) {
-            mToast = Toast.makeText(context, msg, Toast.LENGTH_SHORT);
-            mToast.show();
-        } else {
-            Log.d(LOG_TAG, "displayToast failed for = " + msg);
-        }
+        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
     }
 
     /**
