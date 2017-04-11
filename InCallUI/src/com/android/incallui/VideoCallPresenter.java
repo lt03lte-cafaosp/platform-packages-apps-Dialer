@@ -1179,7 +1179,7 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
             sShallTransmitStaticImage = sUseDefaultImage = mIsInBackground;
         }
 
-        if (mPrimaryCall == null || !VideoUtils.isActiveVideoCall(mPrimaryCall)) {
+        if (!VideoUtils.isVideoCall(mPrimaryCall)) {
             Log.w(this, "onUiShowing, received for non-active video call");
             return;
         }
