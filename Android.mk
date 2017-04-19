@@ -21,6 +21,7 @@ src_dirs := src \
 res_dirs := res \
     $(incallui_dir)/res \
     $(contacts_common_dir)/res \
+    $(contacts_common_dir)/icons/res \
     $(phone_common_dir)/res
 
 src_dirs += \
@@ -40,7 +41,8 @@ LOCAL_RESOURCE_DIR := $(addprefix $(LOCAL_PATH)/, $(res_dirs)) \
 
 LOCAL_JAVA_LIBRARIES := telephony-common \
                         telephony-ext \
-                        ims-common
+                        ims-common \
+                        rcscommon
 
 LOCAL_AAPT_FLAGS := \
     --auto-add-overlay \

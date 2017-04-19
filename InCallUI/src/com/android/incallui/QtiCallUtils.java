@@ -131,6 +131,20 @@ public class QtiCallUtils {
     }
 
     /**
+     * Displays the message as a long Toast on the UI
+     */
+    public static void displayLongToast(Context context, String msg) {
+        Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+    }
+
+    /**
+     * Displays the string corresponding to the resourceId as a long Toast on the UI
+     */
+    public static void displayLongToast(Context context, int resourceId) {
+        displayLongToast(context, context.getResources().getString(resourceId));
+    }
+
+    /**
      * The function is called when Modify Call button gets pressed. The function creates and
      * displays modify call options.
      */
@@ -253,6 +267,18 @@ public class QtiCallUtils {
         }
         return context != null && QtiImsExtUtils.useCustomVideoUi(context);
     }
+
+    /**
+     * Checks the boolean flag in config file to figure out if transmitting static image
+     * in a video call is enabled or not
+     */
+    public static boolean shallTransmitStaticImage(Context context) {
+        if (context == null) {
+            Log.w(context, "Context is null...");
+        }
+        return context != null && QtiImsExtUtils.shallTransmitStaticImage(context);
+    }
+
 
     /**
      * Checks the boolean flag in config file to figure out if it support preview before the accept

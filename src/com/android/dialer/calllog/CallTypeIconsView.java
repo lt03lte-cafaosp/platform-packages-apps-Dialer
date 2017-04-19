@@ -29,6 +29,7 @@ import android.view.View;
 import com.android.contacts.common.testing.NeededForTesting;
 import com.android.contacts.common.util.BitmapUtil;
 import com.android.dialer.R;
+import com.android.dialer.EnrichedCallHandler;
 import com.android.dialer.util.AppCompatConstants;
 import com.google.common.collect.Lists;
 
@@ -44,6 +45,7 @@ import org.codeaurora.ims.utils.QtiImsExtUtils;
 public class CallTypeIconsView extends View {
     private List<Integer> mCallTypes = Lists.newArrayListWithCapacity(3);
     private boolean mShowVideo = false;
+    private boolean mShowRcs = false;
     private int mWidth;
     private int mHeight;
 
@@ -79,38 +81,40 @@ public class CallTypeIconsView extends View {
         invalidate();
     }
 
-    public void addImsOrVideoIcon(int callType, boolean showVideo) {
+    public void addImsIcon(int callType, boolean showVideo) {
         mShowVideo = showVideo;
-        if (showVideo) {
-            mWidth += sResources.videoCall.getIntrinsicWidth();
-            mHeight = Math.max(mHeight, sResources.videoCall.getIntrinsicHeight());
+        final Drawable drawable = getLteOrWifiDrawable(callType, showVideo);
+        if (drawable != null) {
+            // calculating drawable's width and adding it to total width for correct position
+            // of icon.
+            // calculating height by max of drawable height and other icons' height.
+            mWidth += drawable.getIntrinsicWidth();
+            mHeight = Math.max(mHeight, drawable.getIntrinsicHeight());
             invalidate();
-        } else {
-            final Drawable drawable = getImsOrWifiDrawable(callType);
-            if (drawable != null) {
-                // calculating drawable's width and adding it to total width for correct position
-                // of icon.
-                // calculating height by max of drawable height and other icons' height.
-                mWidth += drawable.getIntrinsicWidth();
-                mHeight = Math.max(mHeight, drawable.getIntrinsicHeight());
-                invalidate();
-            }
         }
     }
 
-    private Drawable getImsOrWifiDrawable(int callType) {
-       switch(callType) {
-         case AppCompatConstants.INCOMING_IMS_TYPE:
-         case AppCompatConstants.OUTGOING_IMS_TYPE:
-         case AppCompatConstants.MISSED_IMS_TYPE:
-              return sResources.imsCall;
-         case AppCompatConstants.INCOMING_WIFI_TYPE:
-         case AppCompatConstants.OUTGOING_WIFI_TYPE:
-         case AppCompatConstants.MISSED_WIFI_TYPE:
-              return sResources.wifiCall;
-         default:
-              return null;
-       }
+    private Drawable getLteOrWifiDrawable(int callType, boolean showVideo) {
+        switch(callType) {
+            case AppCompatConstants.INCOMING_IMS_TYPE:
+            case AppCompatConstants.OUTGOING_IMS_TYPE:
+            case AppCompatConstants.MISSED_IMS_TYPE:
+                if (showVideo) {
+                    return sResources.vilteCall;
+                } else {
+                    return sResources.volteCall;
+                }
+            case AppCompatConstants.INCOMING_WIFI_TYPE:
+            case AppCompatConstants.OUTGOING_WIFI_TYPE:
+            case AppCompatConstants.MISSED_WIFI_TYPE:
+                if (showVideo) {
+                    return sResources.viwifiCall;
+                } else {
+                    return sResources.vowifiCall;
+                }
+            default:
+                return null;
+        }
     }
 
     /**
@@ -129,6 +133,21 @@ public class CallTypeIconsView extends View {
         if (showVideo) {
             mWidth += sResources.videoCall.getIntrinsicWidth();
             mHeight = Math.max(mHeight, sResources.videoCall.getIntrinsicHeight());
+            invalidate();
+        }
+    }
+
+    /**
+     * Determines whether the RCS call icon will be shown.
+     *
+     * @param mShowRcs True where the RCS icon should be shown.
+     */
+    public void setShowRcs(boolean showRcs) {
+        mShowRcs = showRcs;
+
+        if (showRcs) {
+            mWidth += sResources.rcsCall.getIntrinsicWidth();
+            mHeight = Math.max(mHeight, sResources.rcsCall.getIntrinsicHeight());
             invalidate();
         }
     }
@@ -196,7 +215,7 @@ public class CallTypeIconsView extends View {
         }
 
         // If showing the video call icon, draw it scaled appropriately.
-        if (mShowVideo) {
+        if (!mIsCarrierOneSupported && mShowVideo) {
             final Drawable drawable = sResources.videoCall;
             final int right = left + drawable.getIntrinsicWidth();
             drawable.setBounds(left, 0, right, drawable.getIntrinsicHeight());
@@ -204,8 +223,17 @@ public class CallTypeIconsView extends View {
             left = right + sResources.iconMargin;
         }
 
+        // If showing the RCS call icon, draw it scaled appropriately.
+        if (mShowRcs && sResources.rcsCall!=null) {
+            final Drawable drawable = sResources.rcsCall;
+            final int right = left + drawable.getIntrinsicWidth();
+            drawable.setBounds(left, 0, right, drawable.getIntrinsicHeight());
+            drawable.draw(canvas);
+            left = right + sResources.iconMargin;
+        }
+
         for (Integer callType : mCallTypes) {
-            final Drawable drawableIms = getImsOrWifiDrawable(callType);
+            final Drawable drawableIms = getLteOrWifiDrawable(callType, mShowVideo);
             if (drawableIms != null) {
                 final int right = left + drawableIms.getIntrinsicWidth();
                 drawableIms.setBounds(left, 0, right, drawableIms.getIntrinsicHeight());
@@ -235,19 +263,35 @@ public class CallTypeIconsView extends View {
         public final Drawable videoCall;
 
         /**
+         * Drawable repesenting a RCS call.
+         */
+        public final Drawable rcsCall;
+
+        /**
          * The margin to use for icons.
          */
         public final int iconMargin;
 
         /**
-         * Drawable repesenting a wifi call.
+         * Drawable repesenting a VoWiFi call.
          */
-        public final Drawable wifiCall;
+        public final Drawable vowifiCall;
 
         /**
-         * Drawable repesenting a IMS call.
+         * Drawable repesenting a ViWiFi call.
          */
-        public final Drawable imsCall;
+        public final Drawable viwifiCall;
+
+        /**
+         * Drawable repesenting a VoLTE call.
+         */
+        public final Drawable volteCall;
+
+        /**
+         * Drawable repesenting a ViLTE call.
+         */
+        public final Drawable vilteCall;
+
         /**
          * Configures the call icon drawables.
          * A single white call arrow which points down and left is used as a basis for all of the
@@ -275,26 +319,27 @@ public class CallTypeIconsView extends View {
             blocked = getScaledBitmap(context, R.drawable.ic_block_24dp);
             blocked.setColorFilter(r.getColor(R.color.blocked_call), PorterDuff.Mode.MULTIPLY);
 
-            if (mIsCarrierOneSupported) {
-                videoCall = r.getDrawable(R.drawable.volte_video).mutate();
-            } else {
             // Get the video call icon, scaled to match the height of the call arrows.
             // We want the video call icon to be the same height as the call arrows, while keeping
             // the same width aspect ratio.
                 videoCall = getScaledBitmap(context, R.drawable.ic_videocam_24dp);
-            }
             videoCall.setColorFilter(r.getColor(R.color.dialtacts_secondary_text_color),
                     PorterDuff.Mode.MULTIPLY);
 
+            if (EnrichedCallHandler.getInstance().isRcsFeatureEnabled()) {
+                rcsCall = r.getDrawable(R.drawable.ic_dialer_sip_white_24dp).mutate();
+                rcsCall.setColorFilter(r.getColor(R.color.dialtacts_secondary_text_color),
+                        PorterDuff.Mode.MULTIPLY);
+            } else {
+                rcsCall = null;
+            }
+
             iconMargin = r.getDimensionPixelSize(R.dimen.call_log_icon_margin);
 
-            wifiCall = r.getDrawable(R.drawable.wifi_calling).mutate();
-            wifiCall.setColorFilter(r.getColor(R.color.dialtacts_secondary_text_color),
-                    PorterDuff.Mode.MULTIPLY);
-
-            imsCall = r.getDrawable(R.drawable.volte_voice).mutate();
-            imsCall.setColorFilter(r.getColor(R.color.dialtacts_secondary_text_color),
-                    PorterDuff.Mode.MULTIPLY);
+            viwifiCall = r.getDrawable(R.drawable.viwifi);
+            vowifiCall = r.getDrawable(R.drawable.vowifi);
+            volteCall = r.getDrawable(R.drawable.volte);
+            vilteCall = r.getDrawable(R.drawable.vilte);
         }
 
         // Gets the icon, scaled to the height of the call type icons. This helps display all the

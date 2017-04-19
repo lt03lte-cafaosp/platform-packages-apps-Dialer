@@ -126,7 +126,7 @@
         <ToggleButton android:id="@+id/pauseVideoButton"
             style="@style/InCallCompoundButton"
             android:background="@drawable/btn_compound_video_off"
-            android:contentDescription="@string/onscreenPauseVideoText"
+            android:contentDescription="@string/onscreenTurnOffCameraText"
             android:visibility="gone" />
 
         <!-- "Change to audio call" for video calls. -->
@@ -156,6 +156,13 @@
             style="@style/InCallButton"
             android:background="@drawable/btn_addparticipant"
             android:contentDescription="@string/onscreenAddParticipant"
+            android:visibility="gone" />
+
+        <!-- "Hide Me" -->
+        <ImageButton android:id="@+id/hideMe"
+            style="@style/InCallButton"
+            android:background="@drawable/btn_compound_video_off"
+            android:contentDescription="@string/qti_ims_hideMeText_unselected"
             android:visibility="gone" />
 
         <!-- "Blind transfer" -->

@@ -81,6 +81,10 @@
     <!-- Modify call error cause -->
     <string name="modify_call_failed_due_to_low_battery">Modify call failed due to low battery.</string>
 
+    <string name="qti_ims_hideMeText_unselected">Hide Me</string>
+    <string name="qti_ims_hideMeText_selected">Show Me</string>
+    <string name="qti_ims_defaultImage_fallback">Using default image</string>
+
     <!-- Description of the call transfer related strings [CHAR LIMIT=NONE] -->
     <string name="qti_ims_transfer_num_error">Number not set. Provide the number via IMS settings and retry.</string>
     <string name="qti_ims_transfer_request_error">Call Transfer request had failed.</string>
@@ -137,6 +141,8 @@
     <string name="session_modify_cause_downgrade_lipsync">Call downgraded due to lipsync</string>
     <!-- Session modify cause code downgrade generic error -->
     <string name="session_modify_cause_downgrade_generic_error">Call downgraded due to generic error</string>
+    <!-- Session modify cause code downgrade generic -->
+    <string name="session_modify_cause_downgrade_generic">Video call changed to voice call</string>
 
     <!-- In-call screen: status label for an incoming conference call [CHAR LIMIT=25] -->
     <string name="card_title_incoming_conf_call">Incoming conference call</string>
@@ -187,4 +193,27 @@
     <string name="video_call_picture_mode_incoming_video">Incoming Video</string>
     <string name="video_call_picture_mode_cancel_option">Cancel</string>
     <string name="video_call_picture_mode_save_option">Save</string>
+
+
+    <!-- Enrich call strings -->
+    <string name="notification_incoming_enrich_call_high_priority">Incoming urgent call</string>
+    <string name="notification_incoming_enrich_call_normal_priority">Incoming rich call</string>
+    <string name="notification_on_hold_enrich_call_high_priority">Urgent call on hold</string>
+    <string name="notification_on_hold_enrich_call_normal_priority">Rich call on hold</string>
+    <string name="notification_dialing_enrich_call_high_priority">Dialing urgent call</string>
+    <string name="notification_dialing_enrich_call_normal_priority">Dialing rich call</string>
+    <string name="notification_ongoing_enrich_call_high_priority">Ongoing urgent call</string>
+    <string name="notification_ongoing_enrich_call_normal_priority">Ongoing rich call</string>
+    <string name="normal_enrich_call">RICH CALL</string>
+    <string name="urgent_enrich_call">URGENT CALL</string>
+    <string name="rich_call_failed">Rich call failed</string>
+    <string name="urgent_call_failed">Urgent call failed</string>
+    <string name="can_not_launch_image_application">Can not find any application to show shared image</string>
+    <string name="can_not_launch_maps_application">Can not find any application to show maps location</string>
+    <string name="enrich_call_permission">Access Enriched call</string>
+    <string name="access_permission_message">Phone App requires access to photos,
+    media &amp; files on your device to enable Rich Calling. To continue, tap  \'YES\'
+    below &amp;  \'ALLOW\' on the next screen.</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
 </resources>

@@ -30,6 +30,7 @@
 package com.android.incallui;
 
 import android.app.AlertDialog;
+import android.graphics.Color;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnCancelListener;
@@ -37,6 +38,7 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.DialogInterface.OnDismissListener;
 import android.content.DialogInterface.OnKeyListener;
 import android.os.Bundle;
+import android.telecom.InCallService.VideoCall;
 import android.telecom.VideoProfile;
 import android.view.KeyEvent;
 import android.view.WindowManager;
@@ -72,7 +74,7 @@ import org.codeaurora.ims.QtiImsExtManager;
  * signalling that low battery indication for the call can be processed now.
  */
 public class InCallLowBatteryListener implements CallList.Listener, InCallDetailsListener,
-        InCallUiListener {
+        InCallUiListener, CallList.CallUpdateListener {
 
     private static InCallLowBatteryListener sInCallLowBatteryListener;
     private PrimaryCallTracker mPrimaryCallTracker;
@@ -167,6 +169,11 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
             return;
         }
 
+        /* Clean up callUpdateListener in case call is terminated during MT upgrade
+           request is in progress. */
+        if (isIncomingUpgradeReq(call.getSessionModificationState())) {
+            CallList.getInstance().removeCallUpdateListener(call.getId(), this);
+        }
         mLowBatteryMap.remove(call);
     }
 
@@ -205,7 +212,105 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
             return;
         }
 
+        /* There can be chances to miss displaying low battery dialog when user tries to
+         * accept incoming VT upgrade request from HUN due to absence of InCallActivity.
+         * In such cases, show low battery dialog when InCallActivity is visible
+         */
         maybeProcessLowBatteryIndication(call);
+    }
+
+    /**
+     * This method overrides onCallChanged method of {@interface CallList.CallUpdateListener}
+     * Added for completeness. No implementation yet.
+     */
+     @Override
+     public void onCallChanged(Call call) {
+     }
+
+    /**
+     * This method overrides onLastForwardedNumberChange method of
+     * {@interface CallList.CallUpdateListener}. Added for completeness.
+     *  No implementation yet.
+     */
+     @Override
+     public void onLastForwardedNumberChange() {
+     }
+
+    /**
+     * This method overrides onChildNumberChange method of {@interface CallList.CallUpdateListener}
+     * Added for completeness. No implementation yet.
+     */
+     @Override
+     public void onChildNumberChange() {
+     }
+
+    /**
+     * This method overrides onSessionModificationStateChange method of
+     * {@interface CallList.CallUpdateListener}
+     * @param call The call object for which session modify change occurred
+     * @param sessionModificationState contains the session modification state change
+     */
+     @Override
+     public void onSessionModificationStateChange(Call call, int sessionModificationState) {
+         Log.d(this, "onSessionModificationStateChange call = " + call);
+
+         if (call == null) {
+             return;
+         }
+
+         if (!isIncomingUpgradeReq(sessionModificationState)) {
+             Log.d(this, "onSessionModificationStateChange removing call update listener");
+             CallList.getInstance().removeCallUpdateListener(call.getId(), this);
+             /*
+              * Dismiss low battery dialog (if any) for eg. when incoming upgrade request
+              * times-out possibly because there is no user input on low battery dialog or
+              * when user dismisses the MT upgrade request from HUN with low battery dialog
+              * showing etc.
+              */
+             dismissPendingDialogs();
+         }
+     }
+
+     private boolean isIncomingUpgradeReq(int sessionModificationState) {
+         return (sessionModificationState ==
+                 Call.SessionModificationState.RECEIVED_UPGRADE_TO_VIDEO_REQUEST);
+     }
+
+    /**
+     * When there is user action to modify call as Video call (for eg click on upgrade
+     * button or accepting incoming upgrade request as video), this API checks to see
+     * if UE is under low battery or not and accordingly processes the callType change
+     * to video and returns TRUE if the callType change is handled by this API else FALSE
+     *
+     * @param call The call that is undergoing a change to video call
+     */
+    public boolean onChangeToVideoCall(Call call) {
+        Log.d(this, "onChangeToVideoCall call = " + call);
+        if (call == null || !mPrimaryCallTracker.isPrimaryCall(call)) {
+            return false;
+        }
+
+        if (!isLowBattery(call.getTelecomCall().getDetails())) {
+           // Do not process if the call is changing to Video when UE is NOT under low battery
+           return false;
+        }
+
+        /* If user tries to change to Video call again, then remove the call from
+         * from lowbatterymap to ensure that the dialog will be shown again
+         */
+        if (mLowBatteryMap.replace(call, PROCESS_LOW_BATTERY) == null) {
+            Log.d(this, "this call is not present in the lowbatterymap. add it.");
+            mLowBatteryMap.put(call, PROCESS_LOW_BATTERY);
+        }
+
+        /* Listen to call updates only when there is a incoming upgrade request so that
+           low battery dialog can be dismissed if MT upgrade request times out */
+        if (isIncomingUpgradeReq(call.getSessionModificationState())) {
+            CallList.getInstance().addCallUpdateListener(call.getId(), this);
+        }
+
+        maybeProcessLowBatteryIndication(call);
+        return true;
     }
 
     /**
@@ -359,10 +464,6 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
     }
 
     private void maybeProcessLowBatteryIndication(Call call) {
-        if (!isLowBatteryVideoCall(call)) {
-            return;
-        }
-
         if (canProcessLowBatteryIndication(call)) {
             displayLowBatteryAlert(call);
             //mark against the call that the respective low battery indication is processed
@@ -401,7 +502,7 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
         });
 
         if (VideoUtils.isIncomingVideoCall(call)) {
-            alertDialog.setNegativeButton(R.string.low_battery_convert, new OnClickListener() {
+            alertDialog.setPositiveButton(R.string.low_battery_convert, new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                      Log.d(this, "displayLowBatteryAlert answer as Voice Call");
@@ -411,7 +512,7 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
             });
 
             alertDialog.setMessage(R.string.low_battery_msg);
-            alertDialog.setPositiveButton(R.string.low_battery_yes, new OnClickListener() {
+            alertDialog.setNegativeButton(R.string.low_battery_yes, new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                      Log.d(this, "displayLowBatteryAlert answer as Video Call");
@@ -420,7 +521,7 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
                 }
             });
         } else if (VideoUtils.isOutgoingVideoCall(call)) {
-            alertDialog.setNegativeButton(R.string.low_battery_convert, new OnClickListener() {
+            alertDialog.setPositiveButton(R.string.low_battery_convert, new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                      Log.d(this, "displayLowBatteryAlert place Voice Call");
@@ -437,7 +538,7 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
             });
 
             alertDialog.setMessage(R.string.low_battery_msg);
-            alertDialog.setPositiveButton(R.string.low_battery_yes, new OnClickListener() {
+            alertDialog.setNegativeButton(R.string.low_battery_yes, new OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                      Log.d(this, "displayLowBatteryAlert place Video Call");
@@ -453,8 +554,8 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
             if (QtiCallUtils.hasVoiceCapabilities(call)) {
                 //active video call can be downgraded to voice
                 alertDialog.setMessage(R.string.low_battery_msg);
-                alertDialog.setPositiveButton(R.string.low_battery_yes, null);
-                alertDialog.setNegativeButton(R.string.low_battery_convert, new OnClickListener() {
+                alertDialog.setNegativeButton(R.string.low_battery_yes, null);
+                alertDialog.setPositiveButton(R.string.low_battery_convert, new OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Log.d(this, "displayLowBatteryAlert downgrading to voice call");
@@ -465,8 +566,8 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
                 /* video call doesn't have downgrade capabilities, so alert the user
                    with a hangup dialog*/
                 alertDialog.setMessage(R.string.low_battery_hangup_msg);
-                alertDialog.setNegativeButton(R.string.low_battery_no, null);
-                alertDialog.setPositiveButton(R.string.low_battery_yes, new OnClickListener() {
+                alertDialog.setPositiveButton(R.string.low_battery_no, null);
+                alertDialog.setNegativeButton(R.string.low_battery_yes, new OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Log.d(this, "displayLowBatteryAlert hanging up the call: " + call);
@@ -476,6 +577,68 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
                     }
                 });
             }
+        } else if (isIncomingUpgradeReq(call.getSessionModificationState())) {
+            // Incoming upgrade request handling
+            alertDialog.setPositiveButton(R.string.low_battery_convert, new OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Log.d(this, "displayLowBatteryAlert decline upgrade request");
+                    CallList.getInstance().removeCallUpdateListener(call.getId(),
+                            InCallLowBatteryListener.this);
+                    InCallPresenter.getInstance().declineUpgradeRequest();
+                }
+            });
+
+            alertDialog.setMessage(R.string.low_battery_msg);
+            alertDialog.setNegativeButton(R.string.low_battery_yes, new OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Log.d(this, "displayLowBatteryAlert accept upgrade request as Video Call");
+                    /* Control reached here means upgrade req can be accepted only as
+                       bidirectional video call */
+                    VideoProfile videoProfile = new VideoProfile(VideoProfile.STATE_BIDIRECTIONAL);
+                    call.getVideoCall().sendSessionModifyResponse(videoProfile);
+                    call.setSessionModificationState(Call.SessionModificationState.NO_REQUEST);
+                    InCallAudioManager.getInstance().onAcceptUpgradeRequest(call,
+                            VideoProfile.STATE_BIDIRECTIONAL);
+                }
+            });
+        } else {
+            // Outgoing upgrade request handling
+            alertDialog.setPositiveButton(R.string.low_battery_convert, new OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Log.d(this, "displayLowBatteryAlert change to Voice Call");
+
+                    // Change the audio route to earpiece
+                    InCallAudioManager.getInstance().onModifyCallClicked(call,
+                            VideoProfile.STATE_AUDIO_ONLY);
+                }
+            });
+
+            alertDialog.setMessage(R.string.low_battery_msg);
+            alertDialog.setNegativeButton(R.string.low_battery_yes, new OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Log.d(this, "displayLowBatteryAlert change to Video Call");
+
+                    VideoCall videoCall = call.getVideoCall();
+                    if (videoCall == null) {
+                        Log.w(this, "displayLowBatteryAlert videocall is null");
+                        return;
+                    }
+
+                    int currUnpausedVideoState = VideoUtils.getUnPausedVideoState(
+                            call.getVideoState());
+                    // Send bidirectional modify request
+                    currUnpausedVideoState |= VideoProfile.STATE_BIDIRECTIONAL;
+
+                    VideoProfile videoProfile = new VideoProfile(currUnpausedVideoState);
+                    videoCall.sendSessionModifyRequest(videoProfile);
+                    call.setSessionModificationState(
+                            Call.SessionModificationState.WAITING_FOR_RESPONSE);
+                }
+            });
         }
 
         mAlert = alertDialog.create();
@@ -495,6 +658,11 @@ public class InCallLowBatteryListener implements CallList.Listener, InCallDetail
         mAlert.setCanceledOnTouchOutside(false);
         mAlert.getWindow().addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         mAlert.show();
+        /*
+         * By default both the buttons will have same color. In case we want to have different color
+         * we need to set specifically.
+         */
+        mAlert.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(Color.BLACK);
     }
 
     /*

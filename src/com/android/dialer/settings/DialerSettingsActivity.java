@@ -39,10 +39,12 @@ import com.android.dialer.compat.UserManagerCompat;
 
 import java.util.List;
 
+import org.codeaurora.ims.utils.QtiImsExtUtils;
+
 public class DialerSettingsActivity extends AppCompatPreferenceActivity {
     protected SharedPreferences mPreferences;
     private boolean migrationStatusOnBuildHeaders;
-
+    private final String ACTION_LAUNCH_CALL_SETTINGS = "org.codeaurora.CALL_SETTINGS";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,10 +65,12 @@ public class DialerSettingsActivity extends AppCompatPreferenceActivity {
 
     @Override
     public void onBuildHeaders(List<Header> target) {
-        Header displayOptionsHeader = new Header();
-        displayOptionsHeader.titleRes = R.string.display_options_title;
-        displayOptionsHeader.fragment = DisplayOptionsSettingsFragment.class.getName();
-        target.add(displayOptionsHeader);
+        if (showDisplayOptions()) {
+            Header displayOptionsHeader = new Header();
+            displayOptionsHeader.titleRes = R.string.display_options_title;
+            displayOptionsHeader.fragment = DisplayOptionsSettingsFragment.class.getName();
+            target.add(displayOptionsHeader);
+        }
 
         Header soundSettingsHeader = new Header();
         soundSettingsHeader.titleRes = R.string.sounds_and_vibration_title;
@@ -83,13 +87,16 @@ public class DialerSettingsActivity extends AppCompatPreferenceActivity {
             target.add(quickResponseSettingsHeader);
         }
 
-        Header speedDialSettingsHeader = new Header();
-        Intent speedDialSettingsIntent = new Intent(this, SpeedDialListActivity.class);
-        speedDialSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (!(QtiImsExtUtils.isCarrierOneSupported()
+                    && QtiImsExtUtils.isCarrierOneCallSettingsAvailable(this))) {
+            Header speedDialSettingsHeader = new Header();
+            Intent speedDialSettingsIntent = new Intent(this, SpeedDialListActivity.class);
+            speedDialSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-        speedDialSettingsHeader.titleRes = R.string.speed_dial_settings;
-        speedDialSettingsHeader.intent = speedDialSettingsIntent;
-        target.add(speedDialSettingsHeader);
+            speedDialSettingsHeader.titleRes = R.string.speed_dial_settings;
+            speedDialSettingsHeader.intent = speedDialSettingsIntent;
+            target.add(speedDialSettingsHeader);
+        }
 
         TelephonyManager telephonyManager =
                 (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
@@ -99,25 +106,39 @@ public class DialerSettingsActivity extends AppCompatPreferenceActivity {
         // primary user and there are multiple SIMs. In N+, "Calling accounts" is shown whenever
         // "Call Settings" is not shown.
         boolean isPrimaryUser = isPrimaryUser();
-        if (isPrimaryUser
-                && TelephonyManagerCompat.getPhoneCount(telephonyManager) <= 1) {
-            Header callSettingsHeader = new Header();
-            Intent callSettingsIntent = new Intent(TelecomManager.ACTION_SHOW_CALL_SETTINGS);
-            callSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-            callSettingsHeader.titleRes = R.string.call_settings_label;
-            callSettingsHeader.intent = callSettingsIntent;
-            target.add(callSettingsHeader);
-        } else if (BuildCompat.isAtLeastN() || isPrimaryUser) {
-            Header phoneAccountSettingsHeader = new Header();
-            Intent phoneAccountSettingsIntent =
-                    new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
-            phoneAccountSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        if (QtiImsExtUtils.isCarrierOneSupported()
+                    && QtiImsExtUtils.isCarrierOneCallSettingsAvailable(this)) {
+            if (isPrimaryUser) {
+                Header callSettingsHeader =  new Header();
+                Intent callSettingsIntent = new Intent(ACTION_LAUNCH_CALL_SETTINGS);
+                callSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
-            phoneAccountSettingsHeader.titleRes = R.string.phone_account_settings_label;
-            phoneAccountSettingsHeader.intent = phoneAccountSettingsIntent;
-            target.add(phoneAccountSettingsHeader);
-        }
+                callSettingsHeader.titleRes = R.string.call_settings_lbl;
+                callSettingsHeader.intent = callSettingsIntent;
+                target.add(callSettingsHeader);
+           }
+        } else {
+            if (isPrimaryUser
+                    && TelephonyManagerCompat.getPhoneCount(telephonyManager) <= 1) {
+                Header callSettingsHeader = new Header();
+                Intent callSettingsIntent = new Intent(TelecomManager.ACTION_SHOW_CALL_SETTINGS);
+                callSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+                callSettingsHeader.titleRes = R.string.call_settings_label;
+                callSettingsHeader.intent = callSettingsIntent;
+                target.add(callSettingsHeader);
+            } else if (BuildCompat.isAtLeastN() || isPrimaryUser) {
+                Header phoneAccountSettingsHeader = new Header();
+                Intent phoneAccountSettingsIntent =
+                        new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
+                phoneAccountSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+                phoneAccountSettingsHeader.titleRes = R.string.phone_account_settings_label;
+                phoneAccountSettingsHeader.intent = phoneAccountSettingsIntent;
+                target.add(phoneAccountSettingsHeader);
+            }
+       }
         if (FilteredNumberCompat.canCurrentUserOpenBlockSettings(this)) {
             Header blockedCallsHeader = new Header();
             blockedCallsHeader.titleRes = R.string.manage_blocked_numbers_label;
@@ -156,6 +177,18 @@ public class DialerSettingsActivity extends AppCompatPreferenceActivity {
                     .setAction("android.intent.action.SHOW_TIMERINFO");
             target.add(historyInfoHeader);
         }
+    }
+
+    /**
+    * Returns {@code true} or {@code false} based on whether the display options setting should be
+    * shown. For languages such as Chinese, Japanese, or Korean, display options aren't useful
+    * since contacts are sorted and displayed family name first by default.
+    *
+    * @return {@code true} if the display options should be shown, {@code false} otherwise.
+    */
+    private boolean showDisplayOptions() {
+        return getResources().getBoolean(R.bool.config_display_order_user_changeable)
+                && getResources().getBoolean(R.bool.config_sort_order_user_changeable);
     }
 
     @Override

@@ -943,6 +943,10 @@ public class CallCardPresenter extends Presenter<CallCardPresenter.CallCardUi>
             return;
         }
 
+        final boolean notUpdateSecondary = mSecondary.getState() == Call.State.ACTIVE
+                && !mSecondary.can(android.telecom.Call.Details.CAPABILITY_SUPPORT_HOLD)
+                && !mSecondary.can(android.telecom.Call.Details.CAPABILITY_HOLD);
+        Log.d(TAG, "notUpdateSecondary:" + notUpdateSecondary);
         if (mSecondary.isConferenceCall()) {
             ui.setSecondary(
                     true /* show */,
@@ -953,7 +957,7 @@ public class CallCardPresenter extends Presenter<CallCardPresenter.CallCardUi>
                     true /* isConference */,
                     mSecondary.isVideoCall(mContext),
                     mIsFullscreen);
-        } else if (mSecondaryContactInfo != null) {
+        } else if (mSecondaryContactInfo != null && !notUpdateSecondary) {
             Log.d(TAG, "updateSecondaryDisplayInfo() " + mSecondaryContactInfo);
             String name = getNameForCall(mSecondaryContactInfo);
             boolean nameIsNumber = name != null && name.equals(mSecondaryContactInfo.number);
@@ -1158,6 +1162,25 @@ public class CallCardPresenter extends Presenter<CallCardPresenter.CallCardUi>
     @Override
     public void onSecondaryCallerInfoVisibilityChanged(boolean isVisible, int height) {
         // No-op - the Call Card is the origin of this event.
+    }
+
+    @Override
+    public void onAnswerViewGrab(boolean isGrabbed) {
+        // No-op - required for RcsCallPresenter.
+    }
+
+    @Override
+    public void onIncomingVideoAvailabilityChanged(boolean isAvailable) {
+        Log.d(this, "onIncomingVideoAvailabilityChanged: available = " + isAvailable);
+        if (mPrimary == null) {
+            return;
+        }
+        updatePrimaryDisplayInfo();
+    }
+
+    @Override
+    public void onSendStaticImageStateChanged(boolean isEnabled) {
+        //No-op
     }
 
     private boolean isPrimaryCallActive() {

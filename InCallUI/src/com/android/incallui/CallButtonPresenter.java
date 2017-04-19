@@ -35,6 +35,7 @@ import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_RXTX_VIDEO_
 import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_RX_VIDEO_CALL;
 import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_VO_VIDEO_CALL;
 import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_ADD_PARTICIPANT;
+import static com.android.incallui.CallButtonFragment.Buttons.BUTTON_HIDE_ME;
 
 import android.content.Context;
 import android.os.Build;
@@ -75,6 +76,8 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
     private boolean mPreviousMuteState = false;
     private static final int MAX_PARTICIPANTS_LIMIT = 6;
     private boolean mEnhanceEnable = false;
+    // Holds TRUE if user clicked on "hideme" option else holds false
+    private static boolean sIsHideMe = false;
 
     // NOTE: Capability constant definition has been duplicated to avoid bundling
     // the Dialer with Frameworks.
@@ -145,6 +148,9 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
             mCall = callList.getIncomingCall();
         } else {
             mCall = null;
+            if (newState == InCallState.NO_CALLS) {
+                sIsHideMe = false;
+            }
         }
         updateUi(newState, mCall);
     }
@@ -268,6 +274,10 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
     }
 
     public void mergeClicked() {
+        if (mCall == null) {
+            return;
+        }
+
         if (getUi().getContext().getResources().getBoolean(
                 R.bool.add_multi_participants_enabled)){
             int participantsCount = 0;
@@ -300,11 +310,13 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
     }
 
     public void addCallClicked() {
-        // Automatically mute the current call
-        mAutomaticallyMuted = true;
-        mPreviousMuteState = AudioModeProvider.getInstance().getMute();
-        // Simulate a click on the mute button
-        muteClicked(true);
+        if (!QtiImsExtUtils.isCarrierOneSupported()) {
+            // Automatically mute the current call
+            mAutomaticallyMuted = true;
+            mPreviousMuteState = AudioModeProvider.getInstance().getMute();
+            // Simulate a click on the mute button
+            muteClicked(true);
+        }
         TelecomAdapter.getInstance().addCall();
     }
 
@@ -343,9 +355,11 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         int currUnpausedVideoState = VideoUtils.getUnPausedVideoState(currVideoState);
         currUnpausedVideoState |= VideoProfile.STATE_BIDIRECTIONAL;
 
-        VideoProfile videoProfile = new VideoProfile(currUnpausedVideoState);
-        videoCall.sendSessionModifyRequest(videoProfile);
-        mCall.setSessionModificationState(Call.SessionModificationState.WAITING_FOR_RESPONSE);
+        if (!InCallLowBatteryListener.getInstance().onChangeToVideoCall(mCall)) {
+            VideoProfile videoProfile = new VideoProfile(currUnpausedVideoState);
+            videoCall.sendSessionModifyRequest(videoProfile);
+            mCall.setSessionModificationState(Call.SessionModificationState.WAITING_FOR_RESPONSE);
+        }
 
         if (QtiCallUtils.useCustomVideoUi(context)) {
             InCallAudioManager.getInstance().onModifyCallClicked(mCall,
@@ -393,6 +407,22 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         }
     }
 
+    /**
+     * Handles click on hide me button
+     * @param isHideMe True if user selected hide me option else false
+     */
+    public void hideMeClicked(boolean isHideMe) {
+        sIsHideMe = isHideMe;
+
+        if (getUi() != null && mCall != null) {
+            updateButtonsState(mCall);
+        }
+
+        /* Click on hideme shall change the static image state i.e. decision
+           is made in VideoCallPresenter whether to replace preview video with
+           static image or whether to resume preview video streaming */
+        InCallPresenter.getInstance().notifyStaticImageStateChanged(isHideMe);
+    }
 
     /**
      * Stop or start client's video transmission.
@@ -472,7 +502,6 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
     private void updateButtonsState(Call call) {
         Log.v(this, "updateButtonsState");
         final CallButtonUi ui = getUi();
-
         final boolean isVideo = VideoUtils.isVideoCall(call);
 
         // Common functionality (audio, hold, etc).
@@ -498,11 +527,11 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         final boolean showUpgradeToVideo =
                 /* When useExt is true, show upgrade button for an active/held
                    call if the call has either voice or video capabilities */
+                ((isCallActive || isCallOnHold) &&
                 ((useExt && QtiCallUtils.hasVoiceOrVideoCapabilities(call)) ||
                 /* When useCustomVideoUi is true, show upgrade button for an active/held
                    voice call only if the current call has video capabilities */
-                (useCustomVideoUi && !isVideo && hasVideoCallCapabilities(call))
-                && (isCallActive || isCallOnHold)) ||
+                (useCustomVideoUi && !isVideo && hasVideoCallCapabilities(call)))) ||
                 /* When useExt and custom UI are false, default to Google behaviour */
                 (!isVideo && !useExt && !useCustomVideoUi && hasVideoCallCapabilities(call));
 
@@ -546,9 +575,18 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         ui.showButton(BUTTON_ADD_CALL, showAddCall);
         ui.showButton(BUTTON_UPGRADE_TO_VIDEO, showUpgradeToVideo && !mEnhanceEnable);
         ui.showButton(BUTTON_DOWNGRADE_TO_AUDIO, showDowngradeToAudio && !useExt);
-        ui.showButton(BUTTON_SWITCH_CAMERA, isVideo);
+        Log.v(this, "updateButtonsState sIsHideMe: " + sIsHideMe);
+        ui.setHideMe(sIsHideMe);
+        // show switch camera button only if video call is NOT in hideme mode
+        ui.showButton(BUTTON_SWITCH_CAMERA, isVideo && !sIsHideMe);
+        // show hide me button only for active video calls
+        ui.showButton(BUTTON_HIDE_ME, isCallActive && isVideo &&
+                QtiCallUtils.shallTransmitStaticImage(getUi().getContext()));
         ui.showButton(BUTTON_PAUSE_VIDEO, isVideo && !useExt && !useCustomVideoUi &&
                 !mEnhanceEnable);
+        if (isVideo) {
+            getUi().setVideoPaused(!VideoUtils.isTransmissionEnabled(call));
+        }
         ui.showButton(BUTTON_DIALPAD, true);
         ui.showButton(BUTTON_MERGE, showMerge);
         ui.showButton(BUTTON_ADD_PARTICIPANT, showAddParticipant && !mEnhanceEnable);
@@ -633,6 +671,7 @@ public class CallButtonPresenter extends Presenter<CallButtonPresenter.CallButto
         void setEnabled(boolean on);
         void setMute(boolean on);
         void setHold(boolean on);
+        void setHideMe(boolean on);
         void setCameraSwitched(boolean isBackFacingCamera);
         void setVideoPaused(boolean isPaused);
         void setAudio(int mode);
