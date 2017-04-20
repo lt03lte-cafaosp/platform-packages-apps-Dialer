@@ -303,6 +303,7 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
 
         // Register for surface and video events from {@link InCallVideoCallListener}s.
         InCallVideoCallCallbackNotifier.getInstance().addSurfaceChangeListener(this);
+        InCallUiStateNotifier.getInstance().addListener(this, true );
         mCurrentVideoState = VideoProfile.STATE_AUDIO_ONLY;
         mCurrentCallState = Call.State.INVALID;
 
@@ -311,7 +312,6 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
         onStateChange(inCallState, inCallState, CallList.getInstance());
         InCallVideoCallCallbackNotifier.getInstance().addVideoEventListener(this,
                 VideoUtils.isVideoCall(mCurrentVideoState));
-        InCallUiStateNotifier.getInstance().addListener(this, true );
     }
 
     /**
@@ -1274,6 +1274,15 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
             return;
         }
 
+        if (shallTransmitStaticImage()) {
+            setPauseImage();
+        }
+
+        if (mPreviewSurfaceState == PreviewSurfaceState.NONE) {
+            Log.w(this, "onCameraDimensionsChange: capabilities received when camera is OFF.");
+            return;
+        }
+
         mPreviewSurfaceState = PreviewSurfaceState.CAPABILITIES_RECEIVED;
         Point previewDimensions = ui.getPreviewSize();
 
@@ -1289,10 +1298,6 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
 
         changePreviewDimensions(width, height);
         ui.setPreviewRotation(mDeviceOrientation);
-
-        if (shallTransmitStaticImage()) {
-            setPauseImage();
-        }
 
         // Check if the preview surface is ready yet; if it is, set it on the {@code VideoCall}.
         // If it not yet ready, it will be set when when creation completes.
