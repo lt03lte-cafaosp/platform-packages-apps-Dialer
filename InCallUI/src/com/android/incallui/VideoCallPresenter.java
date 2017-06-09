@@ -1290,7 +1290,7 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
         Point previewDimensions = ui.getPreviewSize();
 
         if (QtiImsExtUtils.isCarrierOneSupported() &&
-                QtiImsExtUtils.shallCheckSupportForHighVideoQuality(mContext) &&
+                QtiCallUtils.shallCheckSupportForHighVideoQuality(mContext) &&
                 previewDimensions != null &&
                 (previewDimensions.x != width || previewDimensions.y != height)) {
             QtiCallUtils.displayToast(mContext, (mContext.getResources().getString(
@@ -1820,7 +1820,7 @@ public class VideoCallPresenter extends Presenter<VideoCallPresenter.VideoCallUi
      */
     private boolean shallHidePreview(boolean isConf, int videoState) {
         return VideoProfile.isBidirectional(videoState) && isConf
-                && QtiImsExtUtils.shallHidePreviewInVtConference(mContext);
+                && QtiCallUtils.shallHidePreviewInVtConference(mContext);
     }
 
     private boolean isConfCall() {
